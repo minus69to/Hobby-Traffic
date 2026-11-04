@@ -10,7 +10,8 @@ Format ``DRSR`` version 1 (little endian), written gzip-compressed as ``<name>.d
 * ``uint8[n_frames * n_junctions]`` index into ``header.tls_states`` (unique state strings)
 
 The JSON manifest next to it holds scenario metadata and the per-second aggregate metrics.
-Sampling: every ``dt`` seconds (0.5 s by default; the replay run uses a 0.5 s SUMO step).
+Sampling: every ``dt`` seconds (0.5 s by default; the replay run uses a 0.5 s SUMO step); frame ``f``
+holds the positions at simulation time ``f * dt`` and the lamp state shown during ``[f*dt, (f+1)*dt)``.
 """
 
 from __future__ import annotations
@@ -92,7 +93,7 @@ class FrameRecorder:
             if tr is None:
                 tr = Track(pid, "pedestrian", f)
                 self.tracks[pid] = tr
-            if len(tr.xs) < f - tr.first:  # gap (should not happen) -> repeat last
+            while len(tr.xs) < f - tr.first:  # gap (should not happen) -> repeat the last sample
                 tr.xs.append(tr.xs[-1])
                 tr.ys.append(tr.ys[-1])
                 tr.angles.append(tr.angles[-1])
@@ -119,8 +120,8 @@ def encode(rec: FrameRecorder, meta: dict[str, Any]) -> bytes:
         deltas[0] = 0
         deltas = np.clip(deltas, -32768, 32767).astype("<i2")
         pos_chunks.append(deltas.reshape(-1))
-        ang_chunks.append((np.mod(np.asarray(tr.angles), 360.0) / 360.0 * 256.0).astype(np.uint8))
-        spd_chunks.append(np.clip(np.asarray(tr.speeds) / SPEED_QUANT, 0, 255).astype(np.uint8))
+        ang_chunks.append((np.round(np.mod(np.asarray(tr.angles), 360.0) / 360.0 * 256.0) % 256).astype(np.uint8))
+        spd_chunks.append(np.clip(np.round(np.asarray(tr.speeds) / SPEED_QUANT), 0, 255).astype(np.uint8))
         header_tracks.append(
             {
                 "id": tr.id,

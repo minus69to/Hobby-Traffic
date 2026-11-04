@@ -21,7 +21,8 @@ function Head({ head, getState, night }: { head: SignalHead; getState: () => str
   const left = head.stop_line[0]!;
   const px = left[0] - Math.sin(h) * 3.2 + Math.cos(h) * 0.5;
   const pz = -(left[1] + Math.cos(h) * 3.2 + Math.sin(h) * 0.5);
-  const yaw = Math.atan2(Math.cos(h), -Math.sin(h)) + Math.PI;
+  // local -Z must point across the carriageway (the right-hand normal of the approach, in world space)
+  const yaw = h + Math.PI;
   useFrame(() => {
     const s = getState();
     const c = s[linkIdx] ?? 'r';

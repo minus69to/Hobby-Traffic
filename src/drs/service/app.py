@@ -83,9 +83,11 @@ class Service:
             await client.publish(self.topics["alarm"], a.model_dump_json(), qos=1)
             if a.kind != "recovered":
                 self.metrics.fallbacks.labels(a.kind).inc()
-        self.metrics.decisions.labels(self.core.controller).inc(len(out.commands))
-        for ms in self.core.latencies[-1:]:
-            self.metrics.latency.observe(ms / 1000.0)
+        if self.core.last_decided:
+            self.metrics.decisions.labels(self.core.controller).inc()
+            if self.core.last_inference_ms is not None:
+                self.metrics.latency.observe(self.core.last_inference_ms / 1000.0)
+            self.core.last_decided = False
 
     async def mqtt_loop(self) -> None:
         m = self.scfg["mqtt"]

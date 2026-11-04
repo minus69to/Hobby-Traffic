@@ -11,6 +11,7 @@ export interface FollowInfo {
   cls: string;
   speed: number;
   wait: number;
+  side: 'left' | 'right';
 }
 
 export interface PlaybackState {

@@ -34,6 +34,7 @@ def _worker(remote: Connection, parent_remote: Connection, env_fn: Callable[[], 
                     rec = env.finish()
                     for k, info in enumerate(infos):
                         info["terminal_observation"] = obs[k]
+                        info["TimeLimit.truncated"] = True  # episodes end by time limit: bootstrap V(s_T)
                         info["episode_reward"] = rec.total_reward
                         info["scenario"] = rec.scenario
                         info["shield"] = rec.shield_stats.get(info["junction"], {})

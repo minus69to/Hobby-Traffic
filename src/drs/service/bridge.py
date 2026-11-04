@@ -72,21 +72,32 @@ async def run_bridge(
 
         async def reader() -> None:
             async for message in client.messages:
-                payload = payload_bytes(message.payload)
-                if str(message.topic) == topics["alarm"]:
-                    stats["alarms"].append(json.loads(payload))
-                    continue
-                queue.put_nowait(CommandMessage.model_validate_json(payload))
+                try:
+                    payload = payload_bytes(message.payload)
+                    if str(message.topic) == topics["alarm"]:
+                        stats["alarms"].append(json.loads(payload))
+                        continue
+                    queue.put_nowait(CommandMessage.model_validate_json(payload))
+                except Exception as e:
+                    stats["bad_messages"] = stats.get("bad_messages", 0) + 1
+                    print(f"[bridge] ignoring message on {message.topic}: {e}")
 
         task = asyncio.create_task(reader())
         try:
             for step in range(seconds):
                 t = float(step)
                 await client.publish(topics["detectors"], detector_message(sim, jid, t).model_dump_json(), qos=1)
+                if task.done():
+                    raise RuntimeError("bridge reader task ended unexpectedly") from task.exception()
                 try:
+                    loop = asyncio.get_running_loop()
+                    deadline = loop.time() + wait_s
                     cmd = await asyncio.wait_for(queue.get(), timeout=wait_s)
-                    while cmd.timestamp < t and not queue.empty():
-                        cmd = queue.get_nowait()
+                    while cmd.timestamp < t:  # drain stale commands while waiting for the current one
+                        remaining = deadline - loop.time()
+                        if remaining <= 0:
+                            raise TimeoutError
+                        cmd = await asyncio.wait_for(queue.get(), timeout=remaining)
                     last_state = cmd.state
                     stats["commands"] += 1
                 except TimeoutError:

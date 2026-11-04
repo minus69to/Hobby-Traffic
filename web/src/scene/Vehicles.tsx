@@ -73,7 +73,7 @@ export function Vehicles({
         im.frustumCulled = false;
         im.count = 0;
         if (!im.instanceColor) {
-          im.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(im.instanceMatrix.count * 3), 3);
+          im.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(im.instanceMatrix.count * 3).fill(1), 3);
         }
       }
     }
@@ -146,6 +146,7 @@ export function Vehicles({
         im.count = n;
         im.instanceMatrix.needsUpdate = true;
         if (im.instanceColor) im.instanceColor.needsUpdate = true;
+        im.boundingSphere = null; // instances move every frame: let the next raycast recompute it
       }
     }
   });

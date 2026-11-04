@@ -152,7 +152,14 @@ class SumoSim:
             str(self.cfg.sumo.pedestrian_jamtime),
         ]
         if self.tripinfo is not None:
-            cmd += ["--tripinfo-output", str(self.tripinfo), "--tripinfo-output.write-unfinished", "true"]
+            cmd += [
+                "--tripinfo-output",
+                str(self.tripinfo),
+                "--tripinfo-output.write-unfinished",
+                "true",
+                "--tripinfo-output.write-undeparted",
+                "true",
+            ]
         if self.fcd is not None:
             cmd += ["--fcd-output", str(self.fcd), "--fcd-output.attributes", "id,x,y,angle,speed,type,lane"]
         cmd += list(self.extra_args)

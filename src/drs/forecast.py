@@ -45,6 +45,10 @@ def collect_episode(
         from drs.controllers.ppo import PPOController
 
         ctrl = PPOController(model_dir or "models/final/single_seed13")
+    env.reset(scenario=scenario, seed=seed)
+    assert env.sim is not None
+    table_states = [p.state for p in env.sim.tables[env.junction_ids[0]].phases]  # before the episode closes SUMO
+    env.close()
     rec = run_episode(env, ctrl, scenario=scenario, seed=seed)
     jid = next(iter(rec.per_second))
     rows = rec.per_second[jid]
@@ -52,7 +56,6 @@ def collect_episode(
     q = np.array([r["lane_halting"] for r in rows], dtype=np.float32)
     n_phases = cfg.signal.n_phases
     ph = np.zeros((len(rows), n_phases), dtype=np.float32)
-    table_states = [p.state for p in env.sim.tables[jid].phases] if env.sim else []
     for i, st in enumerate(states[: len(rows)]):
         if st in table_states:
             ph[i, table_states.index(st)] = 1.0

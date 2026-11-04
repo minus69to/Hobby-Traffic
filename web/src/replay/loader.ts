@@ -4,12 +4,16 @@ import type { LoadedReplay, ReplayIndexEntry, ReplayManifest } from './types';
 
 const BASE = `${import.meta.env.BASE_URL}data/`;
 const cache = new Map<string, Promise<LoadedReplay>>();
-let geometryCache: Promise<Geometry> | null = null;
+const geometryCache = new Map<string, Promise<Geometry>>();
 let indexCache: Promise<ReplayIndexEntry[]> | null = null;
 
 export function loadGeometry(network = 'single'): Promise<Geometry> {
-  geometryCache ??= fetchGeometry(`${BASE}geometry_${network}.json`);
-  return geometryCache;
+  let p = geometryCache.get(network);
+  if (!p) {
+    p = fetchGeometry(`${BASE}geometry_${network}.json`);
+    geometryCache.set(network, p);
+  }
+  return p;
 }
 
 export function loadIndex(): Promise<ReplayIndexEntry[]> {

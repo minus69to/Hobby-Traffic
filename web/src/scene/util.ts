@@ -56,11 +56,12 @@ export function ribbonGeometry(points: [number, number][], width: number, y = 0)
 
 /** Flat polygon (SUMO coordinates) at height y. */
 export function polygonGeometry(points: [number, number][], y = 0): THREE.BufferGeometry {
-  const shape = new THREE.Shape(points.map(([x, z]) => new THREE.Vector2(x, -z)));
+  // ShapeGeometry lies in the XY plane; rotateX(-90deg) maps (x, Y, 0) -> (x, 0, -Y), so passing the
+  // SUMO y as Y yields world z = -y, consistent with ribbonGeometry.
+  const shape = new THREE.Shape(points.map(([x, y2]) => new THREE.Vector2(x, y2)));
   const g = new THREE.ShapeGeometry(shape);
   g.rotateX(-Math.PI / 2);
   g.translate(0, y, 0);
-  // ShapeGeometry after rotateX(-90) maps (x, y2) -> (x, 0, -y2); we passed y2 = -z so z = z. Good.
   return g;
 }
 
