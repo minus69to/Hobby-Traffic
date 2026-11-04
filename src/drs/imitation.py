@@ -104,7 +104,7 @@ def behaviour_clone(
             logits = model(x[b]).masked_fill(~masks[b], -1e9)
             loss = nn.functional.cross_entropy(logits, y[b])
             opt.zero_grad()
-            loss.backward()
+            loss.backward()  # type: ignore[no-untyped-call]
             opt.step()
             tot += float(loss) * len(b)
         model.eval()
@@ -140,7 +140,7 @@ def main() -> None:
         str(bc.get("teacher", "max_pressure")),
         tcfg.get("episode_seconds"),
     )
-    np.savez_compressed(out_dir / "bc_dataset.npz", **data)
+    np.savez_compressed(out_dir / "bc_dataset.npz", obs=data["obs"], masks=data["masks"], actions=data["actions"])
     res = behaviour_clone(
         data, list(tcfg["ppo"]["policy_layers"]), int(bc["epochs"]), float(bc["lr"]), int(tcfg["seeds"][0])
     )
