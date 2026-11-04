@@ -33,3 +33,5 @@ certs/
 # Misc
 .DS_Store
 *.swp
+sim/demand/**/*.rou.xml
+sim/demand/**/*.rou.json
