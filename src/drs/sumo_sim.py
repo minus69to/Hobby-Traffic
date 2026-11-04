@@ -127,6 +127,8 @@ class SumoSim:
             "--collision.action", "warn",
             "--default.emergencydecel", "9",
             "--xml-validation", "never",
+            "--ignore-junction-blocker", str(self.cfg.sumo.ignore_junction_blocker),
+            "--pedestrian.striping.jamtime", str(self.cfg.sumo.pedestrian_jamtime),
         ]
         if self.tripinfo is not None:
             cmd += ["--tripinfo-output", str(self.tripinfo), "--tripinfo-output.write-unfinished", "true"]

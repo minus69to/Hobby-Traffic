@@ -7,6 +7,8 @@ sumo:
   episode_seconds: 3600
   warmup_seconds: 300       # excluded from metrics
   decision_interval: 5      # s
+  ignore_junction_blocker: 30   # s; vehicles drive past a junction blocker after this long (prevents sublane gridlock)
+  pedestrian_jamtime: 60        # s; striping-model pedestrians squeeze through a jam after this long
 
 networks:
   single:

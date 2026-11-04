@@ -55,6 +55,8 @@ class SumoConfig:
     episode_seconds: int = 3600
     warmup_seconds: int = 300
     decision_interval: int = 5
+    ignore_junction_blocker: int = 30
+    pedestrian_jamtime: int = 60
 
     @staticmethod
     def from_dict(d: dict[str, Any]) -> SumoConfig:
@@ -65,6 +67,8 @@ class SumoConfig:
             episode_seconds=int(d.get("episode_seconds", 3600)),
             warmup_seconds=int(d.get("warmup_seconds", 300)),
             decision_interval=int(d.get("decision_interval", 5)),
+            ignore_junction_blocker=int(d.get("ignore_junction_blocker", 30)),
+            pedestrian_jamtime=int(d.get("pedestrian_jamtime", 60)),
         )
 
 
