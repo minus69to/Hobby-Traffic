@@ -8,6 +8,7 @@ Gymnasium wrapper for the single-junction case is provided in :class:`SingleJunc
 
 from __future__ import annotations
 
+import os
 import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -151,7 +152,7 @@ class TrafficSignalEnv:
         else:
             base = self.tripinfo_dir
             base.mkdir(parents=True, exist_ok=True)
-        return base / f"tripinfo_{self.network}_{self.scenario}_s{self.seed}_{self._episode_counter}.xml"
+        return base / f"tripinfo_{self.network}_{self.scenario}_s{self.seed}_{self._episode_counter}_{os.getpid()}.xml"
 
     def set_scenario_weights(self, weights: dict[str, float]) -> None:
         self.scenario_weights = dict(weights)
