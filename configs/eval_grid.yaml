@@ -1,0 +1,13 @@
+sim_config: configs/sim.yaml
+network: grid2x2
+out_dir: results/grid
+controllers:
+  fixed_time: {type: fixed_time}
+  max_pressure: {type: max_pressure}
+  ppo_independent: {type: ppo, model: models/grid2x2_independent/seed13/best}
+  ppo_shared: {type: ppo, model: models/grid2x2_shared/seed13/best}
+  ppo_gnn: {type: ppo, model: models/grid2x2_gnn/seed13/best}
+scenarios: [offpeak, morning_peak]
+episodes_per_scenario: 5
+n_workers: 4
+bootstrap_samples: 1000
