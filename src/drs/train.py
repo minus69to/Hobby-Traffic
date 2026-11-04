@@ -182,6 +182,23 @@ class CurriculumAndEvalCallback(BaseCallback):
         )
 
 
+def load_bc_weights(model: MaskablePPO, vec: VecNormalize, path: Path) -> None:
+    """Initialise the policy MLP from behaviour cloning and VecNormalize's statistics from the dataset."""
+    ckpt = torch.load(path, weights_only=False)
+    sd = ckpt["state_dict"]
+    model.policy.mlp_extractor.policy_net.load_state_dict(
+        {k.replace("policy_net.", ""): v for k, v in sd.items() if k.startswith("policy_net.")}
+    )
+    model.policy.action_net.load_state_dict(
+        {k.replace("action_net.", ""): v for k, v in sd.items() if k.startswith("action_net.")}
+    )
+    rms: Any = vec.obs_rms
+    rms.mean[:] = np.asarray(ckpt["obs_mean"], dtype=np.float64)
+    rms.var[:] = np.asarray(ckpt["obs_var"], dtype=np.float64)
+    rms.count = 1e4
+    print(f"[bc] initialised policy from {path}")
+
+
 def save_policy(model: MaskablePPO, vec: VecNormalize, path: Path) -> None:
     path.mkdir(parents=True, exist_ok=True)
     model.save(path / "policy.zip")
@@ -246,6 +263,9 @@ def train_seed(tcfg: dict[str, Any], seed: int) -> dict[str, Any]:
         device="cpu",
         verbose=0,
     )
+    bc_init = tcfg.get("bc_init")
+    if bc_init:
+        load_bc_weights(model, vec, REPO_ROOT / str(bc_init))
     t0 = time.time()
     cb = CurriculumAndEvalCallback(
         list(tcfg["curriculum"]),
