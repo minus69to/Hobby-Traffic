@@ -1,0 +1,14 @@
+{
+ "replays": [
+  {
+   "network": "single",
+   "scenario": "morning_peak",
+   "controller": "fixed_time",
+   "seed": 20260,
+   "file": "single_morning_peak_fixed_time.drsr.gz",
+   "size_bytes": 2829319,
+   "n_frames": 7200,
+   "n_tracks": 4291
+  }
+ ]
+}
