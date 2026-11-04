@@ -1,0 +1,1 @@
+{"model":"pending","opset":17,"obs_dim":66,"n_actions":4,"float":{"size_bytes":0,"agreement_vs_torch":0,"latency_p50_ms":0,"latency_p95_ms":0,"n_calls":0},"int8":{"size_bytes":0,"agreement_vs_float":0,"agreement_vs_torch":0,"latency_p50_ms":0,"latency_p95_ms":0,"n_calls":0},"n_random_obs":0,"threads":1,"cpu":"","note":"placeholder until make export runs"}
