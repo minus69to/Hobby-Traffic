@@ -17,7 +17,10 @@ from typing import Any
 
 from drs.config import REPO_ROOT
 
-TEMPLATES = {"README.md": REPO_ROOT / "docs" / "templates" / "README.md.in", "docs/report.md": REPO_ROOT / "docs" / "templates" / "report.md.in"}
+TEMPLATES = {
+    "README.md": REPO_ROOT / "docs" / "templates" / "README.md.in",
+    "docs/report.md": REPO_ROOT / "docs" / "templates" / "report.md.in",
+}
 PLACEHOLDER = re.compile(r"\[\[([a-zA-Z0-9_.:+-]+)\]\]")
 
 
@@ -83,7 +86,7 @@ class Resolver:
             if fmt == "pct":
                 return f"{v:+.1f}%"
             if fmt == "int":
-                return f"{int(round(v)):,}"
+                return f"{round(v):,}"
             if fmt == "kb":
                 return f"{v / 1024:.1f} kB"
             if fmt == "pct100":
@@ -110,6 +113,32 @@ def render_all(write: bool = True) -> dict[str, str]:
     return out
 
 
+HTML_TEMPLATE = """<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Safe Deep RL Traffic Signals for Dhaka-like Mixed Traffic: technical report</title>
+<style>
+body{{max-width:860px;margin:2rem auto;padding:0 1rem;font-family:system-ui,sans-serif;
+line-height:1.55;color:#22182e;background:#fbf5ec}}
+img{{max-width:100%}} table{{border-collapse:collapse;font-size:.9rem;width:100%}}
+th,td{{border-bottom:1px solid #ccc;padding:.3rem .5rem;text-align:left}}
+code{{background:#f0e8dc;padding:0 .2em;border-radius:3px}} a{{color:#b4570e}}
+@media (prefers-color-scheme: dark){{body{{background:#130f1f;color:#f3ecff}}
+code{{background:#2a2040}} a{{color:#ffb347}}}}
+</style></head><body><p><a href="./">Back to the site</a></p>{body}</body></html>
+"""
+
+
+def render_html(markdown_text: str, out: Path) -> bool:
+    """Convert the report to a standalone HTML page (figure links rewritten for the website)."""
+    try:
+        import markdown
+    except ImportError:
+        return False
+    body = markdown.markdown(markdown_text.replace("](../figures/", "](figures/"), extensions=["tables", "fenced_code"])
+    out.write_text(HTML_TEMPLATE.format(body=body), encoding="utf-8")
+    return True
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true", help="do not write; exit 1 if committed files differ")
@@ -121,6 +150,15 @@ def main() -> None:
             raise SystemExit(f"documents differ from their rendered templates: {bad}")
         print("documents match the rendered templates")
     else:
+        if "docs/report.md" in out and render_html(out["docs/report.md"], REPO_ROOT / "docs" / "report.html"):
+            web_pub = REPO_ROOT / "web" / "public"
+            (web_pub / "report.html").write_text(
+                (REPO_ROOT / "docs" / "report.html").read_text(encoding="utf-8"), encoding="utf-8"
+            )
+            fig_dst = web_pub / "figures"
+            fig_dst.mkdir(exist_ok=True)
+            for f in (REPO_ROOT / "figures").glob("*.png"):
+                (fig_dst / f.name).write_bytes(f.read_bytes())
         print(f"rendered {', '.join(out)}")
 
 
