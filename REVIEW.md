@@ -37,6 +37,18 @@ _Draft started before the final evaluation; the "status" lines are updated at th
   from the evaluation runs. Both are stated, but it is a second source of numbers.
 - **Grid experiments** are secondary and, if present, are a single seed.
 
+## Adversarial review outcome
+
+A workflow of 7 reviewers (one per subsystem) and 3 refuters per finding ran before the final
+evaluation: 39 findings, 31 confirmed and fixed (see the commit "Apply 31 confirmed review
+findings"). Refuted and therefore left as is: mask/shield disagreement at max-green (deliberate: the
+shield also forces the change), forced max-green ignoring the walk minimum (only reachable with a
+silent controller after 60 s of green), the non-atomic route-file write (workers generate identical
+files), 1e-9 division floor in the paired bootstrap (the baseline mean is never that small for
+reported metrics), the `independent` grid ablation naming (documented as "no neighbour information"),
+GNN ONNX export (not needed; the grid runs are single-seed feasibility checks), and two cosmetic web
+items. Two confirmed items could not be applied to runs already in progress, see `DECISIONS.md` 11.
+
 ## Known bugs and rough edges
 
 - Bloom (post-processing) is disabled in split view because `EffectComposer` cannot be scissored per
