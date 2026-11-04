@@ -9,6 +9,36 @@
    "size_bytes": 2829319,
    "n_frames": 7200,
    "n_tracks": 4291
+  },
+  {
+   "network": "single",
+   "scenario": "morning_peak",
+   "controller": "ppo_s13",
+   "seed": 20260,
+   "file": "single_morning_peak_ppo_s13.drsr.gz",
+   "size_bytes": 3173008,
+   "n_frames": 7200,
+   "n_tracks": 4303
+  },
+  {
+   "network": "single",
+   "scenario": "incident",
+   "controller": "fixed_time",
+   "seed": 20260,
+   "file": "single_incident_fixed_time.drsr.gz",
+   "size_bytes": 2094390,
+   "n_frames": 7200,
+   "n_tracks": 3625
+  },
+  {
+   "network": "single",
+   "scenario": "incident",
+   "controller": "ppo_s13",
+   "seed": 20260,
+   "file": "single_incident_ppo_s13.drsr.gz",
+   "size_bytes": 2496437,
+   "n_frames": 7200,
+   "n_tracks": 3544
   }
  ]
 }
