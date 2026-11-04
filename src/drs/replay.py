@@ -121,7 +121,16 @@ def encode(rec: FrameRecorder, meta: dict[str, Any]) -> bytes:
         pos_chunks.append(deltas.reshape(-1))
         ang_chunks.append((np.mod(np.asarray(tr.angles), 360.0) / 360.0 * 256.0).astype(np.uint8))
         spd_chunks.append(np.clip(np.asarray(tr.speeds) / SPEED_QUANT, 0, 255).astype(np.uint8))
-        header_tracks.append({"id": tr.id, "cls": CLASSES.index(tr.cls), "first": tr.first, "n": len(tr.xs), "x0": int(q[0, 0]), "y0": int(q[0, 1])})
+        header_tracks.append(
+            {
+                "id": tr.id,
+                "cls": CLASSES.index(tr.cls),
+                "first": tr.first,
+                "n": len(tr.xs),
+                "x0": int(q[0, 0]),
+                "y0": int(q[0, 1]),
+            }
+        )
     uniq: list[str] = []
     idx: dict[str, int] = {}
     tls_idx = np.zeros((rec.n_frames, len(rec.junction_ids)), dtype=np.uint8)

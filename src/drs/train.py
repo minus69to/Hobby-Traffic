@@ -51,12 +51,24 @@ class EnvFactory:
     def __call__(self) -> TrafficSignalEnv:
         cfg = SimConfig.load(self.sim_config)
         return TrafficSignalEnv(
-            cfg, self.network, self.scenarios, self.seeds, reward=self.reward, rng_seed=self.rng_seed, episode_seconds=self.episode_seconds
+            cfg,
+            self.network,
+            self.scenarios,
+            self.seeds,
+            reward=self.reward,
+            rng_seed=self.rng_seed,
+            episode_seconds=self.episode_seconds,
         )
 
 
 def make_env_fn(
-    cfg: SimConfig, network: str, scenarios: dict[str, float], seeds: list[int], reward: RewardWeights, rng_seed: int, episode_seconds: int | None
+    cfg: SimConfig,
+    network: str,
+    scenarios: dict[str, float],
+    seeds: list[int],
+    reward: RewardWeights,
+    rng_seed: int,
+    episode_seconds: int | None,
 ) -> Callable[[], TrafficSignalEnv]:
     return EnvFactory(cfg.path, network, scenarios, seeds, reward, rng_seed, episode_seconds)
 
@@ -67,7 +79,7 @@ def n_junctions(cfg: SimConfig, network: str) -> int:
 
 def evaluate_policy(model: MaskablePPO, vec: VecNormalize, n_episodes: int = 1) -> dict[str, float]:
     """Deterministic rollout on the validation VecEnv; returns mean per-slot episode return and stats."""
-    obs = vec.reset()
+    obs: Any = vec.reset()
     returns: list[float] = []
     queues: list[float] = []
     shield_interventions = 0
@@ -146,8 +158,12 @@ class CurriculumAndEvalCallback(BaseCallback):
         self.eval_vec.training = False
         stats = evaluate_policy(self.model, self.eval_vec, self.eval_episodes)
         wall = time.time() - self.t_start
-        row = {"timesteps": self.num_timesteps, "wall_s": round(wall, 1), **{k: round(v, 4) for k, v in stats.items()},
-               "train_ep_return_mean": round(float(np.mean(self.ep_returns[-8:])), 3) if self.ep_returns else None}
+        row = {
+            "timesteps": self.num_timesteps,
+            "wall_s": round(wall, 1),
+            **{k: round(v, 4) for k, v in stats.items()},
+            "train_ep_return_mean": round(float(np.mean(self.ep_returns[-8:])), 3) if self.ep_returns else None,
+        }
         self.rows.append(row)
         self.logger.record("eval/return", stats["return"])
         self.logger.record("eval/mean_queue", stats["mean_queue"])
@@ -159,7 +175,11 @@ class CurriculumAndEvalCallback(BaseCallback):
         if stats["return"] > self.best:
             self.best = stats["return"]
             save_policy(self.model, train_vec, self.out_dir / "best")
-        print(f"[eval] steps={self.num_timesteps} return={stats['return']:.2f} queue={stats['mean_queue']:.1f} wall={wall:.0f}s", flush=True)
+        print(
+            f"[eval] steps={self.num_timesteps} return={stats['return']:.2f} "
+            f"queue={stats['mean_queue']:.1f} wall={wall:.0f}s",
+            flush=True,
+        )
 
 
 def save_policy(model: MaskablePPO, vec: VecNormalize, path: Path) -> None:
@@ -183,14 +203,22 @@ def train_seed(tcfg: dict[str, Any], seed: int) -> dict[str, Any]:
     torch.manual_seed(seed)
     np.random.seed(seed)
     torch.set_num_threads(1)
-    fns = [make_env_fn(cfg, network, first_stage, train_seeds, reward, seed * 100 + i, episode_seconds) for i in range(n_envs)]
+    fns = [
+        make_env_fn(cfg, network, first_stage, train_seeds, reward, seed * 100 + i, episode_seconds)
+        for i in range(n_envs)
+    ]
     from drs.sumo_sim import observation_size
 
     obs_dim = observation_size(12, cfg.signal.n_phases, 4)
     venv = MultiJunctionVecEnv(fns, nj, obs_dim, cfg.signal.n_phases)
     vec = VecNormalize(venv, norm_obs=True, norm_reward=True, clip_obs=5.0, gamma=float(tcfg["ppo"]["gamma"]))
     eval_scen = {"morning_peak": 1.0}
-    eval_venv = MultiJunctionVecEnv([make_env_fn(cfg, network, eval_scen, val_seeds, reward, 999, episode_seconds)], nj, obs_dim, cfg.signal.n_phases)
+    eval_venv = MultiJunctionVecEnv(
+        [make_env_fn(cfg, network, eval_scen, val_seeds, reward, 999, episode_seconds)],
+        nj,
+        obs_dim,
+        cfg.signal.n_phases,
+    )
     eval_vec = VecNormalize(eval_venv, norm_obs=True, norm_reward=False, clip_obs=5.0, training=False)
     p = tcfg["ppo"]
     lr0 = float(p["learning_rate"])
@@ -209,7 +237,10 @@ def train_seed(tcfg: dict[str, Any], seed: int) -> dict[str, Any]:
         ent_coef=float(p["ent_coef"]),
         vf_coef=float(p.get("vf_coef", 0.5)),
         max_grad_norm=float(p.get("max_grad_norm", 0.5)),
-        policy_kwargs={"net_arch": {"pi": list(p["policy_layers"]), "vf": list(p["policy_layers"])}, "activation_fn": act},
+        policy_kwargs={
+            "net_arch": {"pi": list(p["policy_layers"]), "vf": list(p["policy_layers"])},
+            "activation_fn": act,
+        },
         tensorboard_log=str(out_dir / "tb"),
         seed=seed,
         device="cpu",
@@ -217,7 +248,13 @@ def train_seed(tcfg: dict[str, Any], seed: int) -> dict[str, Any]:
     )
     t0 = time.time()
     cb = CurriculumAndEvalCallback(
-        list(tcfg["curriculum"]), int(tcfg["total_timesteps"]), eval_vec, int(tcfg["eval_every_steps"]), int(tcfg.get("eval_episodes", 1)), out_dir, t0
+        list(tcfg["curriculum"]),
+        int(tcfg["total_timesteps"]),
+        eval_vec,
+        int(tcfg["eval_every_steps"]),
+        int(tcfg.get("eval_episodes", 1)),
+        out_dir,
+        t0,
     )
     cb.verbose = 1
     model.learn(total_timesteps=int(tcfg["total_timesteps"]), callback=cb, tb_log_name="ppo")

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 import numpy as np
 import pytest
@@ -67,10 +66,20 @@ def test_exported_manifests_are_consistent() -> None:
         if manifest.name == "index.json":
             continue
         m = json.loads(manifest.read_text(encoding="utf-8"))
-        for key in ("network", "scenario", "controller", "seed", "file", "n_frames", "metrics", "per_second", "shield_stats"):
+        for key in (
+            "network",
+            "scenario",
+            "controller",
+            "seed",
+            "file",
+            "n_frames",
+            "metrics",
+            "per_second",
+            "shield_stats",
+        ):
             assert key in m, (manifest.name, key)
         assert (REPLAY_DIR / m["file"]).exists()
         assert m["size_bytes"] < 10_000_000
-        for jid, rows in m["per_second"].items():
+        for rows in m["per_second"].values():
             assert rows[0]["t"] >= 1 and all("queue" in r and "avg_wait" in r for r in rows)
         assert "shield_interventions" in m["metrics"]

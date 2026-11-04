@@ -1,0 +1,32 @@
+{
+ "float": {
+  "size_bytes": 36771,
+  "agreement_vs_torch": 1.0,
+  "agreement_vs_float": 1.0,
+  "max_abs_logit_diff_vs_torch": 4.470348358154297e-08,
+  "latency_p50_ms": 0.007675,
+  "latency_p95_ms": 0.012875399999999997,
+  "latency_mean_ms": 0.009797660333333333,
+  "n_calls": 3000
+ },
+ "int8": {
+  "size_bytes": 14985,
+  "agreement_vs_torch": 0.9913333333333333,
+  "agreement_vs_float": 0.9913333333333333,
+  "max_abs_logit_diff_vs_torch": 0.0025794804096221924,
+  "latency_p50_ms": 0.009666000000000001,
+  "latency_p95_ms": 0.02170925,
+  "latency_mean_ms": 0.012848056,
+  "n_calls": 3000
+ },
+ "model": "models/small/seed13",
+ "opset": 17,
+ "obs_dim": 66,
+ "n_actions": 4,
+ "n_random_obs": 3000,
+ "threads": 1,
+ "cpu": "x86_64",
+ "onnxruntime": "1.31.1",
+ "torch": "2.15.0+cu132",
+ "note": "Single-thread CPU latency in the development VM approximates a small edge CPU; it is not a measurement on a Jetson or other target device."
+}

@@ -113,7 +113,7 @@ def load_phase_tables(net_xml: Path, arm_dirs: dict[str, dict[str, str]]) -> dic
     for edge in root.iter("edge"):
         if edge.get("function") == "crossing":
             for e in str(edge.get("crossingEdges", "")).split():
-                for tls_id, dirs in arm_dirs.items():
+                for dirs in arm_dirs.values():
                     if e in dirs:
                         crossing_arm[str(edge.get("id"))] = dirs[e]
     tables: dict[str, PhaseTable] = {}

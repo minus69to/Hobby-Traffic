@@ -64,7 +64,9 @@ def _worker(remote: Connection, parent_remote: Connection, env_fn: Callable[[], 
 class MultiJunctionVecEnv(VecEnv):
     """VecEnv over `n_procs` worker processes, each exposing `n_agents` junction slots."""
 
-    def __init__(self, env_fns: Sequence[Callable[[], TrafficSignalEnv]], n_agents: int, obs_dim: int, n_phases: int) -> None:
+    def __init__(
+        self, env_fns: Sequence[Callable[[], TrafficSignalEnv]], n_agents: int, obs_dim: int, n_phases: int
+    ) -> None:
         self.n_procs = len(env_fns)
         self.n_agents = n_agents
         ctx = mp.get_context("forkserver")
@@ -126,7 +128,9 @@ class MultiJunctionVecEnv(VecEnv):
     def set_attr(self, attr_name: str, value: Any, indices: VecEnvIndices = None) -> None:  # pragma: no cover
         raise NotImplementedError
 
-    def env_method(self, method_name: str, *method_args: Any, indices: VecEnvIndices = None, **method_kwargs: Any) -> list[Any]:
+    def env_method(
+        self, method_name: str, *method_args: Any, indices: VecEnvIndices = None, **method_kwargs: Any
+    ) -> list[Any]:
         if method_name == "action_masks":
             return list(self._masks)
         if method_name == "set_scenario_weights":

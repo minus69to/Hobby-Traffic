@@ -81,7 +81,7 @@ def episode_metrics(rec: EpisodeRecord, warmup: float, episode_seconds: float) -
         ws = [v["waiting"] for v in vehicles if TYPE_TO_CLASS.get(str(v["type"])) == c]
         out[f"wait_{c}"] = float(np.mean(ws)) if ws else 0.0
     queues = []
-    for jid, rows in rec.per_second.items():
+    for rows in rec.per_second.values():
         queues.append(np.mean([r["vehicles_waiting"] for r in rows if r["t"] > warmup]) if rows else 0.0)
     out["mean_queue_length"] = float(np.mean(queues)) if queues else 0.0
     out["shield_interventions"] = float(sum(s.get("interventions", 0) for s in rec.shield_stats.values()))

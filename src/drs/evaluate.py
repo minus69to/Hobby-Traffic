@@ -51,13 +51,30 @@ def _job(args: tuple[str, str, dict[str, Any], str, str, int, int, int | None, s
     cfg = SimConfig.load(sim_config)
     raw_dir = REPO_ROOT / out_dir / "raw"
     raw_dir.mkdir(parents=True, exist_ok=True)
-    env = TrafficSignalEnv(cfg, network, scenario, [seed], episode_seconds=episode_seconds, record=True, tripinfo_dir=raw_dir, rng_seed=seed)
+    env = TrafficSignalEnv(
+        cfg,
+        network,
+        scenario,
+        [seed],
+        episode_seconds=episode_seconds,
+        record=True,
+        tripinfo_dir=raw_dir,
+        rng_seed=seed,
+    )
     ctrl = build_controller(cfg, ctrl_spec, ctrl_name)
     t0 = time.perf_counter()
     rec = run_episode(env, ctrl, scenario=scenario, seed=seed)
     ep_secs = episode_seconds or cfg.sumo.episode_seconds
-    m = episode_metrics(rec, cfg.sumo.warmup_seconds, ep_secs)
-    m.update({"controller": ctrl_name, "scenario": scenario, "seed": seed, "episode": ep_index, "wall_s": round(time.perf_counter() - t0, 1)})
+    m: dict[str, Any] = episode_metrics(rec, cfg.sumo.warmup_seconds, ep_secs)
+    m.update(
+        {
+            "controller": ctrl_name,
+            "scenario": scenario,
+            "seed": seed,
+            "episode": ep_index,
+            "wall_s": round(time.perf_counter() - t0, 1),
+        }
+    )
     if ep_index == 0:  # keep one per-second time series per (controller, scenario) for the curves
         series = {jid: rows for jid, rows in rec.per_second.items()}
         with gzip.open(raw_dir / f"timeseries_{ctrl_name}_{scenario}.json.gz", "wt", encoding="utf-8") as fh:
@@ -76,7 +93,9 @@ def bootstrap_ci(x: np.ndarray, n_boot: int, rng: np.random.Generator) -> tuple[
     return float(np.percentile(means, 2.5)), float(np.percentile(means, 97.5))
 
 
-def paired_pct_change(a: np.ndarray, b: np.ndarray, n_boot: int, rng: np.random.Generator) -> tuple[float, float, float]:
+def paired_pct_change(
+    a: np.ndarray, b: np.ndarray, n_boot: int, rng: np.random.Generator
+) -> tuple[float, float, float]:
     """Percentage change of mean(a) vs mean(b) with a paired bootstrap CI (same seeds)."""
     n = min(len(a), len(b))
     a, b = a[:n], b[:n]
@@ -89,7 +108,13 @@ def paired_pct_change(a: np.ndarray, b: np.ndarray, n_boot: int, rng: np.random.
     return float(pct), float(np.percentile(ratios, 2.5)), float(np.percentile(ratios, 97.5))
 
 
-def aggregate(episodes: list[dict[str, Any]], controllers: list[str], scenarios: list[str], n_boot: int, baseline: str = "fixed_time") -> dict[str, Any]:
+def aggregate(
+    episodes: list[dict[str, Any]],
+    controllers: list[str],
+    scenarios: list[str],
+    n_boot: int,
+    baseline: str = "fixed_time",
+) -> dict[str, Any]:
     rng = np.random.default_rng(0)
     pooled = _pool_ppo(episodes)
     ctrl_names = [*controllers, *(["ppo"] if pooled else [])]
@@ -98,15 +123,25 @@ def aggregate(episodes: list[dict[str, Any]], controllers: list[str], scenarios:
     for ctrl in ctrl_names:
         summary[ctrl] = {}
         for scen in scenarios:
-            rows = sorted([e for e in episodes if e["controller"] == ctrl and e["scenario"] == scen], key=lambda e: (e["seed"], e.get("sub", "")))
-            base_rows = sorted([e for e in episodes if e["controller"] == baseline and e["scenario"] == scen], key=lambda e: e["seed"])
+            rows = sorted(
+                [e for e in episodes if e["controller"] == ctrl and e["scenario"] == scen],
+                key=lambda e: (e["seed"], e.get("sub", "")),
+            )
+            base_rows = sorted(
+                [e for e in episodes if e["controller"] == baseline and e["scenario"] == scen], key=lambda e: e["seed"]
+            )
             if not rows:
                 continue
             entry: dict[str, Any] = {"n": len(rows)}
             for k in METRIC_KEYS:
                 x = np.array([float(r[k]) for r in rows])
                 lo, hi = bootstrap_ci(x, n_boot, rng)
-                item: dict[str, Any] = {"mean": float(x.mean()), "std": float(x.std(ddof=1)) if len(x) > 1 else 0.0, "ci_low": lo, "ci_high": hi}
+                item: dict[str, Any] = {
+                    "mean": float(x.mean()),
+                    "std": float(x.std(ddof=1)) if len(x) > 1 else 0.0,
+                    "ci_low": lo,
+                    "ci_high": hi,
+                }
                 if base_rows and ctrl != baseline:
                     b = np.array([float(r[k]) for r in base_rows])
                     if ctrl == "ppo":  # pooled: compare each seed's episodes to the same evaluation seed
@@ -130,7 +165,12 @@ def _pool_ppo(episodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def write_table(summary: dict[str, Any], path: Path) -> None:
-    cols = ["controller", "scenario", "n", *(f"{k}_{s}" for k in METRIC_KEYS for s in ("mean", "ci_low", "ci_high", "pct_vs_fixed"))]
+    cols = [
+        "controller",
+        "scenario",
+        "n",
+        *(f"{k}_{s}" for k in METRIC_KEYS for s in ("mean", "ci_low", "ci_high", "pct_vs_fixed")),
+    ]
     with path.open("w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
         w.writerow(cols)
@@ -139,7 +179,12 @@ def write_table(summary: dict[str, Any], path: Path) -> None:
                 row: list[Any] = [ctrl, scen, entry["n"]]
                 for k in METRIC_KEYS:
                     it = entry[k]
-                    row += [round(it["mean"], 3), round(it["ci_low"], 3), round(it["ci_high"], 3), round(it.get("pct_vs_fixed", float("nan")), 2)]
+                    row += [
+                        round(it["mean"], 3),
+                        round(it["ci_low"], 3),
+                        round(it["ci_high"], 3),
+                        round(it.get("pct_vs_fixed", float("nan")), 2),
+                    ]
                 w.writerow(row)
 
 
@@ -207,7 +252,10 @@ def main() -> None:
     for ctrl, scens in res["summary"].items():
         for scen, e in scens.items():
             mw = e["mean_waiting_time"]
-            print(f"{ctrl:14s} {scen:13s} wait {mw['mean']:7.1f} [{mw['ci_low']:.1f}, {mw['ci_high']:.1f}]  vs fixed {mw.get('pct_vs_fixed', 0):+.1f}%")
+            print(
+                f"{ctrl:14s} {scen:13s} wait {mw['mean']:7.1f} [{mw['ci_low']:.1f}, {mw['ci_high']:.1f}]  "
+                f"vs fixed {mw.get('pct_vs_fixed', 0):+.1f}%"
+            )
 
 
 if __name__ == "__main__":

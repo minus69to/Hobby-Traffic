@@ -31,16 +31,19 @@ class PPOController:
         import pickle
 
         with (d / "vecnormalize.pkl").open("rb") as fh:
-            vec: VecNormalize = pickle.load(fh)  # noqa: S301 - our own file
-        self.obs_mean = vec.obs_rms.mean.astype(np.float32)
-        self.obs_var = vec.obs_rms.var.astype(np.float32)
+            vec: VecNormalize = pickle.load(fh)
+        rms: Any = vec.obs_rms
+        self.obs_mean = np.asarray(rms.mean, dtype=np.float32)
+        self.obs_var = np.asarray(rms.var, dtype=np.float32)
         self.clip = float(vec.clip_obs)
         self.eps = float(vec.epsilon)
         if name:
             self.name = name
 
     def normalise(self, obs: np.ndarray) -> np.ndarray:
-        return np.clip((obs - self.obs_mean) / np.sqrt(self.obs_var + self.eps), -self.clip, self.clip).astype(np.float32)
+        return np.asarray(
+            np.clip((obs - self.obs_mean) / np.sqrt(self.obs_var + self.eps), -self.clip, self.clip), dtype=np.float32
+        )
 
     def reset(self, env: Any) -> None:
         return None

@@ -116,13 +116,21 @@ def _check_trace(table: PhaseTable, cfg: SignalConfig, actions: list[int]) -> No
             green_links = {i for i, c in enumerate(s) if c in "Gg"}
             # links that lost green must have gone through yellow (vehicles) or red (crossings)
             if green_links != prev_green_links and prev_green_links and green_links:
-                assert green_links.isdisjoint(prev_green_links) or green_links <= prev_green_links or prev_green_links <= green_links
+                assert (
+                    green_links.isdisjoint(prev_green_links)
+                    or green_links <= prev_green_links
+                    or prev_green_links <= green_links
+                )
             prev_green_links = green_links
     # every green interval is between min_green and max_green seconds long,
     # and every switch is separated by yellow + all_red of clearance
     runs: list[tuple[str, int]] = []
     for s in states:
-        kind = "y" if "y" in s else ("r" if set(s) == {"r"} else "g" + str(sorted(i for i, c in enumerate(s) if c in "Gg")))
+        kind = (
+            "y"
+            if "y" in s
+            else ("r" if set(s) == {"r"} else "g" + str(sorted(i for i, c in enumerate(s) if c in "Gg")))
+        )
         if runs and runs[-1][0] == kind:
             runs[-1] = (kind, runs[-1][1] + 1)
         else:
