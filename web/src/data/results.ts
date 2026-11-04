@@ -5,6 +5,8 @@
 import evalSummary from '@results/eval_summary.json';
 import edgeBenchmark from '@results/edge_benchmark.json';
 import trainingSummary from '@results/training_summary.json';
+import forecastResults from '@results/forecast.json';
+import imitationResults from '@results/imitation.json';
 
 export interface MetricStat {
   mean: number;
@@ -58,6 +60,21 @@ export interface TrainingSummary {
   note: string;
 }
 
+export interface ForecastResults {
+  n_train_windows?: number;
+  n_test_windows?: number;
+  history_s?: number;
+  models: Record<string, Record<string, { mae: number; mae_ci: [number, number]; rmse: number; rmse_ci: [number, number] } | number | number[]>>;
+  note: string;
+}
+
+export interface ImitationResults {
+  runs: Record<string, { eval_rows: { timesteps: number; wall_s: number; return: number }[]; wall_clock_s: number; best_validation_return: number | null; bc_val_acc?: number; bc_samples?: number }>;
+  note: string;
+}
+
+export const FORECAST = forecastResults as unknown as ForecastResults;
+export const IMITATION = imitationResults as unknown as ImitationResults;
 export const EVAL = evalSummary as unknown as EvalSummary;
 export const EDGE = edgeBenchmark as unknown as EdgeBenchmark;
 export const TRAINING = trainingSummary as unknown as TrainingSummary;
