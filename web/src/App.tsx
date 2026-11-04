@@ -7,6 +7,7 @@ import { HowItWorks, SafetyFSM } from './sections/Diagrams';
 import { ResultsCharts } from './sections/ResultsCharts';
 import { Edge } from './sections/Edge';
 import { Author, Limitations } from './sections/Outro';
+import { Extras } from './sections/Extras';
 import { loadIndex } from './replay/loader';
 import { useStore } from './store/playback';
 import type { ReplayIndexEntry } from './replay/types';
@@ -73,6 +74,7 @@ export default function App() {
           <SafetyFSM />
           <ResultsCharts />
           <Edge />
+          <Extras />
           <Limitations />
           <Author />
         </main>

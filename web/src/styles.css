@@ -95,6 +95,7 @@ code { background: var(--bg-2); padding: 0 0.3em; border-radius: 4px; font-size:
 .seg { display: inline-flex; gap: 2px; }
 .hint { color: var(--muted); font-size: 0.72rem; }
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 0.8rem; margin-top: 1rem; }
+.card.wide { grid-column: 1 / -1; }
 .card { padding: 1rem; border-radius: 14px; background: var(--bg-2); border: 1px solid var(--line); }
 .card.good { border-color: rgba(52, 211, 153, 0.5); }
 .card.bad { border-color: rgba(239, 68, 68, 0.5); }
