@@ -75,6 +75,7 @@ class SimConfig:
     raw: dict[str, Any]
     sumo: SumoConfig = field(default_factory=SumoConfig)
     signal: SignalConfig = field(default_factory=SignalConfig)
+    path: str = "configs/sim.yaml"
 
     @staticmethod
     def load(path: str | Path = "configs/sim.yaml") -> SimConfig:
@@ -83,6 +84,7 @@ class SimConfig:
             raw=raw,
             sumo=SumoConfig.from_dict(raw.get("sumo", {})),
             signal=SignalConfig.from_dict(raw.get("signal", {})),
+            path=str(path),
         )
 
     @property
