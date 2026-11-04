@@ -1,0 +1,34 @@
+# 2x2 grid, variant "gnn" (see configs/train_grid.yaml for the shared-MLP default)
+sim_config: configs/sim.yaml
+network: grid2x2
+out_dir: models/grid2x2_gnn
+seeds: [13]
+total_timesteps: 100000
+n_envs: 4
+policy_kind: gnn
+independent: false
+curriculum:
+  - {until: 0.3, scenarios: {offpeak: 1.0}}
+  - {until: 1.0, scenarios: {offpeak: 0.2, morning_peak: 0.4, evening_peak: 0.4}}
+ppo:
+  policy_layers: [128, 128]
+  activation: tanh
+  embed_dim: 64
+  n_steps: 512
+  batch_size: 256
+  n_epochs: 10
+  learning_rate: 3.0e-4
+  lr_linear_decay: true
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_range: 0.2
+  ent_coef: 0.01
+  vf_coef: 0.5
+  max_grad_norm: 0.5
+reward:
+  w_wait_delta: 1.0
+  w_pressure: 0.2
+  w_ped_wait: 0.3
+  w_switch: 0.05
+eval_every_steps: 16384
+eval_episodes: 1

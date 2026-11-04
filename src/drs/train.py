@@ -21,6 +21,7 @@ from sb3_contrib import MaskablePPO
 from sb3_contrib.common.maskable.utils import get_action_masks
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.vec_env import VecNormalize
+from torch import nn
 
 from drs.config import REPO_ROOT, SimConfig, load_yaml
 from drs.env import RewardWeights, TrafficSignalEnv
@@ -39,7 +40,11 @@ class EnvFactory:
         reward: RewardWeights,
         rng_seed: int,
         episode_seconds: int | None,
+        neighbour_obs: bool = False,
+        neighbour_info: bool = True,
     ) -> None:
+        self.neighbour_obs = neighbour_obs
+        self.neighbour_info = neighbour_info
         self.sim_config = sim_config
         self.network = network
         self.scenarios = scenarios
@@ -69,8 +74,12 @@ def make_env_fn(
     reward: RewardWeights,
     rng_seed: int,
     episode_seconds: int | None,
+    neighbour_obs: bool = False,
+    neighbour_info: bool = True,
 ) -> Callable[[], TrafficSignalEnv]:
-    return EnvFactory(cfg.path, network, scenarios, seeds, reward, rng_seed, episode_seconds)
+    return EnvFactory(
+        cfg.path, network, scenarios, seeds, reward, rng_seed, episode_seconds, neighbour_obs, neighbour_info
+    )
 
 
 def n_junctions(cfg: SimConfig, network: str) -> int:
@@ -182,6 +191,17 @@ class CurriculumAndEvalCallback(BaseCallback):
         )
 
 
+def policy_kwargs(p: dict[str, Any], act: type[nn.Module], gnn: bool) -> dict[str, Any]:
+    if not gnn:
+        return {}
+    from drs.gnn import GraphAttentionExtractor
+
+    return {
+        "features_extractor_class": GraphAttentionExtractor,
+        "features_extractor_kwargs": {"embed_dim": int(p.get("embed_dim", 64))},
+    }
+
+
 def load_bc_weights(model: MaskablePPO, vec: VecNormalize, path: Path) -> None:
     """Initialise the policy MLP from behaviour cloning and VecNormalize's statistics from the dataset."""
     ckpt = torch.load(path, weights_only=False)
@@ -220,18 +240,30 @@ def train_seed(tcfg: dict[str, Any], seed: int) -> dict[str, Any]:
     torch.manual_seed(seed)
     np.random.seed(seed)
     torch.set_num_threads(1)
+    neighbour_obs = str(tcfg.get("policy_kind", "mlp")) == "gnn"
+    neighbour_info = not bool(tcfg.get("independent", False))  # False = no information about neighbours at all
     fns = [
-        make_env_fn(cfg, network, first_stage, train_seeds, reward, seed * 100 + i, episode_seconds)
+        make_env_fn(
+            cfg,
+            network,
+            first_stage,
+            train_seeds,
+            reward,
+            seed * 100 + i,
+            episode_seconds,
+            neighbour_obs,
+            neighbour_info,
+        )
         for i in range(n_envs)
     ]
     from drs.sumo_sim import observation_size
 
-    obs_dim = observation_size(12, cfg.signal.n_phases, 4)
+    obs_dim = observation_size(12, cfg.signal.n_phases, 4) + (4 * 49 if neighbour_obs else 0)
     venv = MultiJunctionVecEnv(fns, nj, obs_dim, cfg.signal.n_phases)
     vec = VecNormalize(venv, norm_obs=True, norm_reward=True, clip_obs=5.0, gamma=float(tcfg["ppo"]["gamma"]))
     eval_scen = {"morning_peak": 1.0}
     eval_venv = MultiJunctionVecEnv(
-        [make_env_fn(cfg, network, eval_scen, val_seeds, reward, 999, episode_seconds)],
+        [make_env_fn(cfg, network, eval_scen, val_seeds, reward, 999, episode_seconds, neighbour_obs, neighbour_info)],
         nj,
         obs_dim,
         cfg.signal.n_phases,
@@ -254,7 +286,8 @@ def train_seed(tcfg: dict[str, Any], seed: int) -> dict[str, Any]:
         ent_coef=float(p["ent_coef"]),
         vf_coef=float(p.get("vf_coef", 0.5)),
         max_grad_norm=float(p.get("max_grad_norm", 0.5)),
-        policy_kwargs={
+        policy_kwargs=policy_kwargs(p, act, neighbour_obs)
+        | {
             "net_arch": {"pi": list(p["policy_layers"]), "vf": list(p["policy_layers"])},
             "activation_fn": act,
         },
