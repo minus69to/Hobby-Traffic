@@ -16,9 +16,9 @@ from typing import Any
 import matplotlib
 
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
+import matplotlib.pyplot as plt
 
-from drs.config import REPO_ROOT  # noqa: E402
+from drs.config import REPO_ROOT
 
 COLOURS = {"fixed_time": "#f59e0b", "max_pressure": "#60a5fa", "ppo": "#34d399"}
 LABELS = {"fixed_time": "Fixed-time (Webster)", "max_pressure": "Max-pressure", "ppo": "Safe PPO (pooled seeds)"}
@@ -72,7 +72,16 @@ def fairness(summary: dict[str, Any], scenario: str, out: Path) -> None:
         ys = [e[f"wait_{cls}"]["mean"] for cls in CLASSES]
         lo = [e[f"wait_{cls}"]["mean"] - e[f"wait_{cls}"]["ci_low"] for cls in CLASSES]
         hi = [e[f"wait_{cls}"]["ci_high"] - e[f"wait_{cls}"]["mean"] for cls in CLASSES]
-        ax.bar([k + (i - (len(ctrls) - 1) / 2) * w for k in range(len(CLASSES))], ys, width=w, color=COLOURS[c], label=LABELS[c], yerr=[lo, hi], capsize=2, error_kw={"lw": 0.8})
+        ax.bar(
+            [k + (i - (len(ctrls) - 1) / 2) * w for k in range(len(CLASSES))],
+            ys,
+            width=w,
+            color=COLOURS[c],
+            label=LABELS[c],
+            yerr=[lo, hi],
+            capsize=2,
+            error_kw={"lw": 0.8},
+        )
     ax.set_xticks(range(len(CLASSES)))
     ax.set_xticklabels(CLASSES)
     ax.set_ylabel("mean waiting time (s)")
@@ -95,7 +104,14 @@ def wait_over_time(raw_dir: Path, scenario: str, out: Path, warmup: int) -> None
         ts = [r["t"] for r in rows]
         ys = [r["vehicles_waiting"] for r in rows]
         base = c.split("_s")[0] if c.startswith("ppo") else c
-        ax.plot(ts, ys, color=COLOURS.get(base, "#888"), lw=0.9, alpha=0.9 if base != "ppo" else 0.6, label=LABELS.get(base, c) if c in ("fixed_time", "max_pressure", "ppo_s13") else None)
+        ax.plot(
+            ts,
+            ys,
+            color=COLOURS.get(base, "#888"),
+            lw=0.9,
+            alpha=0.9 if base != "ppo" else 0.6,
+            label=LABELS.get(base, c) if c in ("fixed_time", "max_pressure", "ppo_s13") else None,
+        )
     ax.axvspan(0, warmup, color="grey", alpha=0.12, label="warm-up (excluded)")
     ax.set_xlabel("simulated time (s)")
     ax.set_ylabel("vehicles waiting")
@@ -113,7 +129,14 @@ def training_curves(models_dir: Path, out: Path) -> list[dict[str, Any]]:
         meta = json.loads(meta_path.read_text(encoding="utf-8"))
         rows = meta.get("eval_rows", [])
         if rows:
-            ax.plot([r["timesteps"] for r in rows], [r["return"] for r in rows], marker="o", ms=3, lw=1, label=f"seed {meta['seed']}")
+            ax.plot(
+                [r["timesteps"] for r in rows],
+                [r["return"] for r in rows],
+                marker="o",
+                ms=3,
+                lw=1,
+                label=f"seed {meta['seed']}",
+            )
         runs.append(
             {
                 "seed": meta["seed"],
@@ -167,18 +190,44 @@ def main() -> None:
     if summary_path.exists():
         ev = json.loads(summary_path.read_text(encoding="utf-8"))
         scenarios = ev["meta"]["scenarios"]
-        bars(ev["summary"], scenarios, "mean_waiting_time", "mean waiting time (s)", fig_dir / "wait_by_scenario.png", "Mean vehicle waiting time (95 % bootstrap CI)")
-        bars(ev["summary"], scenarios, "ped_mean_wait", "pedestrian mean wait (s)", fig_dir / "ped_wait_by_scenario.png", "Pedestrian waiting time (95 % bootstrap CI)")
-        bars(ev["summary"], scenarios, "throughput", "vehicles completed per episode", fig_dir / "throughput_by_scenario.png", "Throughput (95 % bootstrap CI)")
+        bars(
+            ev["summary"],
+            scenarios,
+            "mean_waiting_time",
+            "mean waiting time (s)",
+            fig_dir / "wait_by_scenario.png",
+            "Mean vehicle waiting time (95 % bootstrap CI)",
+        )
+        bars(
+            ev["summary"],
+            scenarios,
+            "ped_mean_wait",
+            "pedestrian mean wait (s)",
+            fig_dir / "ped_wait_by_scenario.png",
+            "Pedestrian waiting time (95 % bootstrap CI)",
+        )
+        bars(
+            ev["summary"],
+            scenarios,
+            "throughput",
+            "vehicles completed per episode",
+            fig_dir / "throughput_by_scenario.png",
+            "Throughput (95 % bootstrap CI)",
+        )
         scen = "morning_peak" if "morning_peak" in scenarios else scenarios[0]
         fairness(ev["summary"], scen, fig_dir / "fairness_by_class.png")
         wait_over_time(res / "raw", scen, fig_dir / "wait_over_time.png", int(ev["meta"]["warmup_seconds"]))
         if "incident" in scenarios:
-            wait_over_time(res / "raw", "incident", fig_dir / "wait_over_time_incident.png", int(ev["meta"]["warmup_seconds"]))
+            wait_over_time(
+                res / "raw", "incident", fig_dir / "wait_over_time_incident.png", int(ev["meta"]["warmup_seconds"])
+            )
         print("wrote evaluation figures")
     runs = training_curves(REPO_ROOT / args.models, fig_dir / "training_curves.png")
     (res / "training_summary.json").write_text(
-        json.dumps({"runs": runs, "note": "Wall-clock on 4 CPU cores in the development VM (see ENVIRONMENT.md)."}, indent=1), encoding="utf-8"
+        json.dumps(
+            {"runs": runs, "note": "Wall-clock on 4 CPU cores in the development VM (see ENVIRONMENT.md)."}, indent=1
+        ),
+        encoding="utf-8",
     )
     bench_path = res / "edge_benchmark.json"
     if bench_path.exists():

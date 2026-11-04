@@ -11,12 +11,11 @@ from __future__ import annotations
 
 import json
 import sys
-from pathlib import Path
 
 from drs.config import REPO_ROOT
 
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
-from render_docs import render_all  # noqa: E402
+from render_docs import render_all
 
 
 def check_docs() -> list[str]:
