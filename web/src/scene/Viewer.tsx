@@ -5,10 +5,17 @@ import { Scene } from './Scene';
 import { clock, useStore } from '../store/playback';
 import { loadGeometry, loadIndex, loadReplay } from '../replay/loader';
 
+declare global {
+  interface Window {
+    __drs?: { clock: typeof clock; store: typeof useStore; frames: number };
+  }
+}
+
 /** Advances the shared clock from the render loop and mirrors it to React at ~5 Hz. */
 function Clock() {
   const acc = useRef(0);
   useFrame((_, delta) => {
+    if (window.__drs) window.__drs.frames += 1;
     if (clock.playing) {
       clock.time = Math.min(clock.duration, clock.time + delta * clock.speed);
       if (clock.time >= clock.duration) clock.time = 0;
@@ -43,6 +50,8 @@ export function Viewer({ className }: { className?: string }) {
 
   useEffect(() => {
     setEl(container.current);
+    // hooks for the headless media-capture script (scripts/capture_media.py)
+    window.__drs = { clock, store: useStore, frames: 0 };
   }, []);
 
   useEffect(() => {
