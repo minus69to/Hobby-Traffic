@@ -106,22 +106,6 @@ def write_routes(cfg: SimConfig, spec: NetworkSpec, scenario: str, seed: int, ou
                 f'vehsPerHour="{vph:.3f}" departLane="best" departSpeed="max" departPos="base"/>'
             )
             fid += 1
-    # incident: one vehicle breaks down and blocks a lane for `duration` seconds
-    if "incident" in scen:
-        inc = scen["incident"]
-        jid = next(iter(spec.junctions))
-        arm = spec.junctions[jid].arms[str(inc["edge_suffix"])]
-        exit_edge = spec.junctions[jid].arms[spec.junctions[jid].turn_target(arm.direction, "s")].outbound_edge
-        lines.append(
-            f'  <vehicle id="incident_truck" type="truck" depart="{int(inc["start"])}" '
-            f'departLane="{int(inc["lane"])}" color="1,0,1">'
-        )
-        lines.append(f'    <route edges="{arm.inbound_edge} {exit_edge}"/>')
-        lines.append(
-            f'    <stop lane="{arm.inbound_edge}_{int(inc["lane"])}" endPos="{float(inc["end_pos"]):.1f}" '
-            f'duration="{int(inc["duration"])}" parking="false"/>'
-        )
-        lines.append("  </vehicle>")
     # pedestrians: each crossing is used by people walking between the two adjacent external arms
     pph = float(scen["pedestrians_per_crossing"])
     pid = 0
@@ -138,6 +122,24 @@ def write_routes(cfg: SimConfig, spec: NetworkSpec, scenario: str, seed: int, ou
                 lines.append(f'    <walk from="{frm}" to="{to}"/>')
                 lines.append("  </personFlow>")
                 pid += 1
+    # incident (listed last: SUMO loads route files incrementally and drops elements whose departure
+    # precedes an earlier element, so the depart=1500 vehicle must follow the begin=0 flows)
+    # one vehicle breaks down and blocks a lane for `duration` seconds
+    if "incident" in scen:
+        inc = scen["incident"]
+        jid = next(iter(spec.junctions))
+        arm = spec.junctions[jid].arms[str(inc["edge_suffix"])]
+        exit_edge = spec.junctions[jid].arms[spec.junctions[jid].turn_target(arm.direction, "s")].outbound_edge
+        lines.append(
+            f'  <vehicle id="incident_truck" type="truck" depart="{int(inc["start"])}" '
+            f'departLane="{int(inc["lane"])}" color="1,0,1">'
+        )
+        lines.append(f'    <route edges="{arm.inbound_edge} {exit_edge}"/>')
+        lines.append(
+            f'    <stop lane="{arm.inbound_edge}_{int(inc["lane"])}" endPos="{float(inc["end_pos"]):.1f}" '
+            f'duration="{int(inc["duration"])}" parking="false"/>'
+        )
+        lines.append("  </vehicle>")
     lines.append("</routes>")
     out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     manifest = {
