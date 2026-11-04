@@ -35,3 +35,9 @@ certs/
 *.swp
 sim/demand/**/*.rou.xml
 sim/demand/**/*.rou.json
+models/single/
+models/single_bc/
+models/grid2x2*/
+models/forecast/
+models/small/
+results/peek/
