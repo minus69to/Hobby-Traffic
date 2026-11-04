@@ -41,3 +41,19 @@ def test_webster_plan_respects_bounds(phase_table: PhaseTable) -> None:
     assert all(cfg.signal.min_green <= g <= cfg.signal.max_green for g in plan)
     assert plan[0] >= plan[1] and plan[2] >= plan[3]  # through phases carry more flow than right turns
     assert all(g % cfg.sumo.decision_interval == 0 for g in plan)
+
+
+def test_route_files_are_sorted_by_departure(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """SUMO loads routes incrementally: an element with a later depart must not precede earlier ones."""
+    import re
+
+    from drs.demand import write_routes
+
+    cfg = SimConfig.load()
+    spec = build_spec("single", cfg.networks)
+    out = tmp_path / "incident.rou.xml"
+    write_routes(cfg, spec, "incident", 1, out)
+    text = out.read_text(encoding="utf-8")
+    departs = [float(m) for m in re.findall(r'(?:begin|depart)="([\d.]+)"', text)]
+    assert departs == sorted(departs)
+    assert text.count("<personFlow") == 8 and "incident_truck" in text
