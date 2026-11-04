@@ -1,0 +1,25 @@
+# Edge controller service configuration
+junction_id: C
+network: single
+sim_config: configs/sim.yaml
+model_onnx: models/final/single_seed13/policy_int8.onnx
+model_meta: models/final/single_seed13/onnx_meta.json
+mqtt:
+  host: localhost
+  port: 1883
+  tls: false
+  cafile: certs/ca.crt
+  certfile: certs/service.crt
+  keyfile: certs/service.key
+topics:
+  detectors: "drs/junction/{id}/detectors"
+  command: "drs/junction/{id}/command"
+  status: "drs/junction/{id}/status"
+  alarm: "drs/junction/{id}/alarm"
+watchdog:
+  stale_after_s: 15        # detector data older than this -> fixed-time fallback + alarm
+  inference_deadline_ms: 50
+  tick_s: 1.0
+http:
+  host: 0.0.0.0
+  port: 8080

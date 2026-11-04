@@ -1,0 +1,31 @@
+{
+ "scenario": "evening_peak",
+ "seed": 99,
+ "network": "single",
+ "edge_vph": {
+  "N_C": 900.0,
+  "C_E": 1090.0,
+  "C_S": 930.0,
+  "C_W": 940.0,
+  "E_C": 850.0,
+  "C_N": 1140.0,
+  "S_C": 1250.0,
+  "W_C": 1100.0
+ },
+ "arms_vph": {
+  "N": 900.0,
+  "S": 1250.0,
+  "E": 850.0,
+  "W": 1100.0
+ },
+ "turns": [
+  0.2,
+  0.6,
+  0.2
+ ],
+ "pedestrians_per_crossing": 240.0,
+ "incident": null,
+ "sensor_noise": null,
+ "n_routes": 12,
+ "n_flows": 84
+}

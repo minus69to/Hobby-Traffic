@@ -1,0 +1,20 @@
+{
+ "network": "single",
+ "scenario": "morning_peak",
+ "simulated_seconds": 3600,
+ "wall_seconds": 35.72,
+ "sim_steps_per_second": 100.8,
+ "decision_steps_per_second": 20.2,
+ "shield_stats": {
+  "C": {
+   "interventions": 0,
+   "rejected_min_green": 0,
+   "rejected_ped_walk": 0,
+   "ignored_in_clearance": 0,
+   "forced_max_green": 0,
+   "rejected_invalid": 0,
+   "switches": 87
+  }
+ },
+ "ped_wait_samples": 3300
+}

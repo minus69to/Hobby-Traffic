@@ -1,0 +1,31 @@
+{
+ "scenario": "morning_peak",
+ "seed": 2026,
+ "network": "single",
+ "edge_vph": {
+  "N_C": 1250.0,
+  "C_E": 940.0,
+  "C_S": 1140.0,
+  "C_W": 1090.0,
+  "E_C": 1100.0,
+  "C_N": 930.0,
+  "S_C": 900.0,
+  "W_C": 850.0
+ },
+ "arms_vph": {
+  "N": 1250.0,
+  "S": 900.0,
+  "E": 1100.0,
+  "W": 850.0
+ },
+ "turns": [
+  0.2,
+  0.6,
+  0.2
+ ],
+ "pedestrians_per_crossing": 240.0,
+ "incident": null,
+ "sensor_noise": null,
+ "n_routes": 12,
+ "n_flows": 84
+}
