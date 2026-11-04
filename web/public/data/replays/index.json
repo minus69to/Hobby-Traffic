@@ -26,9 +26,9 @@
    "controller": "fixed_time",
    "seed": 20260,
    "file": "single_incident_fixed_time.drsr.gz",
-   "size_bytes": 2094390,
+   "size_bytes": 2836748,
    "n_frames": 7200,
-   "n_tracks": 3625
+   "n_tracks": 4330
   },
   {
    "network": "single",
@@ -36,9 +36,9 @@
    "controller": "ppo_s13",
    "seed": 20260,
    "file": "single_incident_ppo_s13.drsr.gz",
-   "size_bytes": 2496437,
+   "size_bytes": 3196696,
    "n_frames": 7200,
-   "n_tracks": 3544
+   "n_tracks": 4298
   }
  ]
 }
