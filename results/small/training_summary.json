@@ -1,0 +1,13 @@
+{
+ "runs": [
+  {
+   "seed": 13,
+   "network": "single",
+   "total_timesteps": 4096,
+   "wall_clock_s": 33.3,
+   "env_steps_per_s": 123.1,
+   "best_validation_return": -435.9700009112712
+  }
+ ],
+ "note": "Wall-clock on 4 CPU cores in the development VM (see ENVIRONMENT.md)."
+}
