@@ -11,7 +11,8 @@ Recorded on 2026-11-04 in the development VM (CPU only).
 | RL | stable-baselines3 2.9.2, sb3-contrib 2.9.2, gymnasium 1.4.0 |
 | torch | 2.15.0 (the CUDA wheel was installed because the CPU-only index was unreachable through the VM proxy; it runs on CPU) |
 | ONNX | onnx 1.23.2, onnxruntime 1.31.1 |
-| Testing / lint | pytest, hypothesis 6.170, ruff 0.17.3, mypy 2.4.1 |
+| Testing / lint | pytest, hypothesis 6.170, ruff 0.17.3, mypy 2.4.1, playwright 1.64 (pre-installed Chromium 1243) |
+| Docs | python-markdown for docs/report.html |
 | Service | fastapi 0.162, uvicorn, aiomqtt 2.5.1, paho-mqtt 2.1, pydantic 2.13, prometheus-client |
 | Node | 22.23.4, npm 10.9.9 |
 | ffmpeg | system package |

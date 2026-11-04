@@ -1,0 +1,66 @@
+# REVIEW (final self-review, M9)
+
+_Draft started before the final evaluation; the "status" lines are updated at the end of the run._
+
+## What is strong
+
+- **One control path, one shield.** Fixed-time, max-pressure, PPO and the deployed MQTT service all
+  go through `SafetyShield`, which also produces the action mask. Safety does not depend on the
+  policy being good, and the property-based tests (`tests/test_shield.py`) exercise random action
+  sequences and random timing parameters.
+- **Honest numbers end to end.** README, report and website are rendered/built from `results/`;
+  `scripts/check_numbers.py` fails if a document or the web bundle drifts from the results files.
+  Confidence intervals are paired bootstraps over shared evaluation seeds; shield interventions are
+  reported even when zero.
+- **The simulation is deliberately hard.** Sublane weaving, six classes including 12 km/h rickshaws,
+  signalised pedestrian crossings with real interaction, an incident and sensor noise.
+- **Reproducibility.** Plain-XML networks built by netconvert, seeded demand, YAML configs, disjoint
+  seed sets, `make reproduce` for a 15-minute end-to-end run, CI with a smoke training.
+- **Deployment story is real code, not slides.** ONNX export with parity and quantisation numbers,
+  pydantic-versioned MQTT schemas, watchdog fallback, Prometheus sidecar, SUMO bridge, integration test.
+- **The visualisation is built from simulation data.** Road geometry comes from the SUMO network,
+  replays are compact binaries decoded in the browser, the HUD reads the replay manifest.
+
+## What a hiring manager or reviewer would question
+
+- **Synthetic everything.** No real counts, no calibration, no field data. The project says so in
+  every artefact, but the numbers are only as meaningful as the assumed demand.
+- **Max-pressure baseline weakness.** The textbook arg-max never serves the shared through+right
+  lane's right-turn phase voluntarily (see `DECISIONS.md` 8), so it looks weak off-peak. A reviewer
+  may ask for a lane-blocking-aware variant; several were tried without a dominant winner.
+- **Training budget.** 300k steps per seed on CPU is small for PPO in traffic control; the learning
+  curves are noisy and a longer run would likely change the ranking vs max-pressure at the peak.
+- **Reward shaping.** The waiting-time difference reward telescopes; weights were chosen by scale
+  reasoning, not by an ablation.
+- **Pedestrian modelling.** Striping model only, with the jam-time setting needed to avoid deadlock.
+- **Replays use a 0.5 s step, evaluation 1 s.** HUD numbers come from the replay run; the tables
+  from the evaluation runs. Both are stated, but it is a second source of numbers.
+- **Grid experiments** are secondary and, if present, are a single seed.
+
+## Known bugs and rough edges
+
+- Bloom (post-processing) is disabled in split view because `EffectComposer` cannot be scissored per
+  pane in `@react-three/drei`'s `View`.
+- Headless SwiftShader rendering is slow; the media capture renders at reduced frame rates.
+- `libsumo` allows only one simulation per process, so every worker is a separate process and the
+  `grid2x2` training uses the custom `MultiJunctionVecEnv` instead of SB3's `SubprocVecEnv`.
+- The Docker files were not executed in the development VM (no daemon).
+
+## Next steps
+
+1. Calibrate demand and vehicle parameters against real counts for one Dhaka junction.
+2. Longer training with several reward variants (pure pressure, class-weighted waiting) and a proper
+   hyper-parameter sweep; report learning curves with multiple seeds for every variant.
+3. Lane-blocking-aware max-pressure and SUMO's actuated controller as additional baselines.
+4. Corridor coordination on the grid with the parameter-shared and graph policies.
+5. A hardware-in-the-loop test of the MQTT service on a small ARM board.
+
+## Status checklist (filled at M9)
+
+- [ ] `make lint test` passes
+- [ ] `make reproduce` runs end to end
+- [ ] `npm run build` and the Playwright smoke test pass with no console errors
+- [ ] `scripts/check_numbers.py` passes
+- [ ] property-based tests rerun with more examples: zero violations
+- [ ] repository searched for anything resembling proprietary deployment material
+- [ ] `ALL DELIVERABLES PUSHED` written to PROGRESS.md
