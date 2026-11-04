@@ -9,6 +9,8 @@ MaskablePPO so the rest of the pipeline (mask, shield, evaluation) is unchanged.
 
 from __future__ import annotations
 
+from typing import Any
+
 import gymnasium as gym
 import torch
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
@@ -27,7 +29,7 @@ def neighbour_layout(n_phases: int = 4) -> tuple[int, int]:
 
 
 class GraphAttentionExtractor(BaseFeaturesExtractor):
-    def __init__(self, observation_space: gym.Space, embed_dim: int = 64, n_phases: int = 4) -> None:
+    def __init__(self, observation_space: gym.Space[Any], embed_dim: int = 64, n_phases: int = 4) -> None:
         base, full = neighbour_layout(n_phases)
         assert observation_space.shape is not None and observation_space.shape[0] == full, (
             "neighbour_obs must be enabled"
