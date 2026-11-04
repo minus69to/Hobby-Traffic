@@ -4,7 +4,7 @@ PIP ?= .venv/bin/pip
 export LIBSUMO_AS_TRACI=1
 export PYTHONPATH := src
 
-.PHONY: setup networks demand speedtest lint test train train-grid eval report replay geometry export service web web-dev media reproduce check-numbers clean
+.PHONY: setup networks demand speedtest lint test test-all train train-grid eval report replay geometry export service web web-dev media docs reproduce check-numbers clean
 
 setup:
 	uv venv .venv --python 3.13 || python3 -m venv .venv
@@ -64,6 +64,9 @@ web-dev:
 
 media:
 	$(PY) scripts/capture_media.py
+
+docs:
+	$(PY) scripts/render_docs.py
 
 check-numbers:
 	$(PY) scripts/check_numbers.py
