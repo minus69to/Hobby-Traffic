@@ -8,6 +8,7 @@ Gymnasium wrapper for the single-junction case is provided in :class:`SingleJunc
 
 from __future__ import annotations
 
+import dataclasses
 import os
 import tempfile
 from collections.abc import Callable
@@ -48,8 +49,18 @@ class SensorNoise:
     dropout: float = 0.0
 
     def apply(self, s: JunctionState, rng: np.random.Generator) -> JunctionState:
+        """Return a noisy *copy* of `s` (the raw state stays available for the reward)."""
         if self.gaussian_std <= 0 and self.dropout <= 0:
             return s
+        s = dataclasses.replace(
+            s,
+            lane_halting=s.lane_halting.copy(),
+            lane_max_wait=s.lane_max_wait.copy(),
+            lane_count=s.lane_count.copy(),
+            class_counts=s.class_counts.copy(),
+            ped_waiting=s.ped_waiting.copy(),
+            out_lane_halting=dict(s.out_lane_halting),
+        )
 
         def noisy(x: np.ndarray, scale: float) -> np.ndarray:
             y = x + rng.normal(0.0, self.gaussian_std * scale, size=x.shape)
@@ -133,6 +144,7 @@ class TrafficSignalEnv:
         self.max_steps = int(self.episode_seconds // self.decision_interval)
         self.record_data: EpisodeRecord | None = None
         self.last_states: dict[str, JunctionState] = {}
+        self.raw_states: dict[str, JunctionState] = {}
         self._episode_counter = 0
         self._tmpdir: tempfile.TemporaryDirectory[str] | None = None
 
@@ -193,24 +205,25 @@ class TrafficSignalEnv:
                 self.record_data.per_second[jid] = []
                 self.record_data.tls_states[jid] = []
         self._sense()
-        self._prev_wait = {jid: s.total_acc_wait for jid, s in self.last_states.items()}
+        self._prev_wait = {jid: s.total_acc_wait for jid, s in self.raw_states.items()}
         return self._observations()
 
     def _sense(self) -> None:
         assert self.sim is not None
-        states = {jid: self.sim.junction_state(jid) for jid in self.junction_ids}
-        if self._episode_noise is not None:
-            states = {jid: self._episode_noise.apply(s, self.rng) for jid, s in states.items()}
-        # neighbour pressure: pressure of the junction at the far end of each arm
-        pressures = {jid: s.pressure() for jid, s in states.items()}
-        for jid, s in states.items():
+        raw = {jid: self.sim.junction_state(jid) for jid in self.junction_ids}
+        # neighbour pressure: pressure of the junction at the far end of each arm (raw, pre-noise)
+        pressures = {jid: s.pressure() for jid, s in raw.items()}
+        for jid, s in raw.items():
             np_ = np.zeros(4)
             for k, d in enumerate(DIRS):
                 arm = self.sim.spec.junctions[jid].arms[d]
                 if not arm.external and self.neighbour_info:
                     np_[k] = pressures.get(arm.neighbour, 0.0)
             s.neighbour_pressure = np_
-        self.last_states = states
+        self.raw_states = raw
+        # observations (and the baseline controllers) see the noisy copy; the reward uses the raw state
+        noise = self._episode_noise
+        self.last_states = {jid: noise.apply(s, self.rng) for jid, s in raw.items()} if noise is not None else raw
 
     def _observations(self) -> np.ndarray:
         obs = np.zeros((self.n_agents, self.obs_dim), dtype=np.float32)
@@ -253,7 +266,7 @@ class TrafficSignalEnv:
         rewards = np.zeros(self.n_agents, dtype=np.float32)
         infos: list[dict[str, Any]] = []
         for k, jid in enumerate(self.junction_ids):
-            s = self.last_states[jid]
+            s = self.raw_states[jid]
             dwait = s.total_acc_wait - self._prev_wait[jid]
             self._prev_wait[jid] = s.total_acc_wait
             w = self.reward_w
@@ -278,9 +291,9 @@ class TrafficSignalEnv:
             shown = {jid: self.shields[jid].tick(self.step_length) for jid in self.junction_ids}
             for jid, state in shown.items():
                 self.sim.set_state(jid, state)
-            self.sim.step()
-            if self.step_hook is not None:
+            if self.step_hook is not None:  # positions at k*dt with the state shown during [k*dt, (k+1)*dt)
                 self.step_hook(self.sim, shown)
+            self.sim.step()
             if self.record and self.record_data is not None:
                 t = self.sim.time
                 if abs(t - round(t)) < 1e-6:  # once per simulated second

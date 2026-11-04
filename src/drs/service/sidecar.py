@@ -38,7 +38,8 @@ def make_app(core: ControllerCore, metrics: Metrics) -> FastAPI:
     def health() -> dict[str, Any]:
         st = core.status(core.last_msg_time or 0.0)
         return {
-            "status": "ok" if core.model_loaded or core.controller == "fixed_time" else "degraded",
+            "status": "ok" if core.controller == "rl" and core.alarm_state is None else "degraded",
+            "alarm": core.alarm_state,
             "controller": st.controller,
             "model_loaded": st.model_loaded,
             "last_detector_age_s": st.last_detector_age_s,

@@ -96,7 +96,7 @@ export function HUD() {
     return { waitA: a.map((r) => r.avg_wait), waitB: b.map((r) => r.avg_wait), qA: a.map((r) => r.vehicles_waiting), qB: b.map((r) => r.vehicles_waiting) };
   }, [left, right]);
   if (!left || !right) return null;
-  const followPose = follow && right ? trackPoseAt(right.replay, follow.id, t) ?? trackPoseAt(left.replay, follow.id, t) : null;
+  const followPose = follow ? trackPoseAt((follow.side === 'right' ? right : left).replay, follow.id, t) : null;
   const showLeft = viewMode === 'split' || activeSide === 'left';
   const showRight = viewMode === 'split' || activeSide === 'right';
   return (

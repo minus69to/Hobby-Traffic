@@ -13,6 +13,8 @@ from drs.sumo_sim import TYPE_TO_CLASS, VEHICLE_CLASSES
 
 METRIC_KEYS: tuple[str, ...] = (
     "mean_travel_time",
+    "mean_depart_delay",
+    "unfinished_share",
     "p95_travel_time",
     "mean_waiting_time",
     "mean_time_loss",
@@ -32,7 +34,9 @@ def parse_tripinfo(path: Path, warmup: float) -> tuple[list[dict[str, Any]], lis
     for _, el in ET.iterparse(path, events=("end",)):
         if el.tag == "tripinfo":
             depart = float(el.get("depart", 0))
-            if depart >= warmup:
+            depart_delay = float(el.get("departDelay", 0))
+            scheduled = depart - depart_delay if depart >= 0 else -1.0
+            if scheduled >= warmup or (depart < 0 and float(el.get("departDelay", -1)) >= warmup):
                 vehicles.append(
                     {
                         "id": el.get("id"),
@@ -40,6 +44,8 @@ def parse_tripinfo(path: Path, warmup: float) -> tuple[list[dict[str, Any]], lis
                         "duration": float(el.get("duration", 0)),
                         "waiting": float(el.get("waitingTime", 0)),
                         "time_loss": float(el.get("timeLoss", 0)),
+                        "depart_delay": max(depart_delay, 0.0),
+                        "departed": depart >= 0,
                         "arrived": float(el.get("arrival", -1)) >= 0,
                     }
                 )
@@ -60,32 +66,44 @@ def parse_tripinfo(path: Path, warmup: float) -> tuple[list[dict[str, Any]], lis
 
 
 def episode_metrics(rec: EpisodeRecord, warmup: float, episode_seconds: float) -> dict[str, float]:
-    """Metrics of one episode from the tripinfo file plus the recorded per-second data."""
+    """Metrics of one episode from the tripinfo file plus the recorded per-second data.
+
+    Travel/waiting-time means use completed trips only (unfinished trips would enter with truncated
+    values); the share of unfinished or never-inserted vehicles is reported separately, and the time
+    vehicles spent queued before insertion (``departDelay``) is reported as ``mean_depart_delay``.
+    """
     assert rec.tripinfo is not None, "episode was run without tripinfo output"
     vehicles, persons = parse_tripinfo(rec.tripinfo, warmup)
     vehicles = [v for v in vehicles if v["id"] != "incident_truck"]
-    durations = np.array([v["duration"] for v in vehicles]) if vehicles else np.zeros(1)
-    waits = np.array([v["waiting"] for v in vehicles]) if vehicles else np.zeros(1)
-    losses = np.array([v["time_loss"] for v in vehicles]) if vehicles else np.zeros(1)
+    finished = [v for v in vehicles if v["arrived"]]
+    durations = np.array([v["duration"] for v in finished]) if finished else np.array([np.nan])
+    waits = np.array([v["waiting"] for v in finished]) if finished else np.array([np.nan])
+    losses = np.array([v["time_loss"] for v in finished]) if finished else np.array([np.nan])
+    hours = max(episode_seconds - warmup, 1.0) / 3600.0
     out: dict[str, float] = {
-        "mean_travel_time": float(durations.mean()),
-        "p95_travel_time": float(np.percentile(durations, 95)),
-        "mean_waiting_time": float(waits.mean()),
-        "mean_time_loss": float(losses.mean()),
-        "throughput": float(sum(1 for v in vehicles if v["arrived"])),
-        "ped_mean_wait": float(np.mean([p["waiting"] for p in persons])) if persons else 0.0,
+        "mean_travel_time": float(np.nanmean(durations)),
+        "p95_travel_time": float(np.nanpercentile(durations, 95)),
+        "mean_waiting_time": float(np.nanmean(waits)),
+        "mean_time_loss": float(np.nanmean(losses)),
+        "mean_depart_delay": float(np.mean([v["depart_delay"] for v in vehicles])) if vehicles else float("nan"),
+        "unfinished_share": float(1.0 - len(finished) / len(vehicles)) if vehicles else float("nan"),
+        "throughput": float(len(finished) / hours),
+        "ped_mean_wait": float(np.mean([p["waiting"] for p in persons])) if persons else float("nan"),
         "n_vehicles": float(len(vehicles)),
+        "n_finished": float(len(finished)),
         "n_pedestrians": float(len(persons)),
     }
     for c in VEHICLE_CLASSES:
-        ws = [v["waiting"] for v in vehicles if TYPE_TO_CLASS.get(str(v["type"])) == c]
-        out[f"wait_{c}"] = float(np.mean(ws)) if ws else 0.0
+        ws = [v["waiting"] for v in finished if TYPE_TO_CLASS.get(str(v["type"])) == c]
+        out[f"wait_{c}"] = float(np.mean(ws)) if ws else float("nan")
     queues = []
     for rows in rec.per_second.values():
-        queues.append(np.mean([r["vehicles_waiting"] for r in rows if r["t"] > warmup]) if rows else 0.0)
-    out["mean_queue_length"] = float(np.mean(queues)) if queues else 0.0
+        vals = [r["vehicles_waiting"] for r in rows if r["t"] > warmup]
+        queues.append(float(np.mean(vals)) if vals else float("nan"))
+    out["mean_queue_length"] = float(np.nanmean(queues)) if queues and not all(np.isnan(queues)) else float("nan")
     out["shield_interventions"] = float(sum(s.get("interventions", 0) for s in rec.shield_stats.values()))
     switches = sum(s.get("switches", 0) for s in rec.shield_stats.values())
-    hours = max(episode_seconds, 1.0) / 3600.0
-    out["phase_switches_per_hour"] = float(switches / hours / max(len(rec.shield_stats), 1))
+    out["phase_switches_per_hour"] = float(
+        switches / (max(episode_seconds, 1.0) / 3600.0) / max(len(rec.shield_stats), 1)
+    )
     return out

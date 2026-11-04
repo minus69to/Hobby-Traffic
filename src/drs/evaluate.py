@@ -86,8 +86,10 @@ def _job(args: tuple[str, str, dict[str, Any], str, str, int, int, int | None, s
 
 
 def bootstrap_ci(x: np.ndarray, n_boot: int, rng: np.random.Generator) -> tuple[float, float]:
+    x = x[~np.isnan(x)]
     if len(x) < 2:
-        return float(x.mean()), float(x.mean())
+        m = float(x.mean()) if len(x) else float("nan")
+        return m, m
     idx = rng.integers(0, len(x), size=(n_boot, len(x)))
     means = x[idx].mean(axis=1)
     return float(np.percentile(means, 2.5)), float(np.percentile(means, 97.5))
@@ -96,15 +98,30 @@ def bootstrap_ci(x: np.ndarray, n_boot: int, rng: np.random.Generator) -> tuple[
 def paired_pct_change(
     a: np.ndarray, b: np.ndarray, n_boot: int, rng: np.random.Generator
 ) -> tuple[float, float, float]:
-    """Percentage change of mean(a) vs mean(b) with a paired bootstrap CI (same seeds)."""
-    n = min(len(a), len(b))
-    a, b = a[:n], b[:n]
+    """Percentage change of mean(a) vs mean(b) with a paired bootstrap CI over the shared seeds.
+
+    `a` and `b` are aligned per evaluation seed; `a` may hold several replicates per seed (rows of a
+    2-D array), in which case the bootstrap resamples seeds (clusters) and averages the replicates.
+    Returns NaN when the baseline mean is zero or no pair is available.
+    """
+    a = np.asarray(a, dtype=float)
+    b = np.asarray(b, dtype=float)
+    a2 = a if a.ndim == 2 else a[:, None]
+    ok = ~np.isnan(b) & ~np.isnan(a2).all(axis=1)
+    a2, b = a2[ok], b[ok]
+    n = len(b)
+    if n == 0:
+        return float("nan"), float("nan"), float("nan")
     base = b.mean()
-    pct = (a.mean() / base - 1.0) * 100.0 if base else 0.0
-    if n < 2 or not base:
+    if base == 0:
+        return float("nan"), float("nan"), float("nan")
+    a_mean = float(np.nanmean(a2))
+    pct = (a_mean / base - 1.0) * 100.0
+    if n < 2:
         return float(pct), float(pct), float(pct)
     idx = rng.integers(0, n, size=(n_boot, n))
-    ratios = (a[idx].mean(axis=1) / np.maximum(b[idx].mean(axis=1), 1e-9) - 1.0) * 100.0
+    a_seed = np.nanmean(a2, axis=1)  # per-seed mean over replicates (cluster bootstrap)
+    ratios = (a_seed[idx].mean(axis=1) / np.maximum(np.abs(b[idx].mean(axis=1)), 1e-9) - 1.0) * 100.0
     return float(pct), float(np.percentile(ratios, 2.5)), float(np.percentile(ratios, 97.5))
 
 
@@ -132,21 +149,34 @@ def aggregate(
             )
             if not rows:
                 continue
-            entry: dict[str, Any] = {"n": len(rows)}
+            seeds = sorted({r["seed"] for r in rows})
+            entry: dict[str, Any] = {
+                "n": len(rows),
+                "n_seeds": len(seeds),
+                "n_policy_seeds": len({r.get("sub", ctrl) for r in rows}),
+            }
             for k in METRIC_KEYS:
                 x = np.array([float(r[k]) for r in rows])
-                lo, hi = bootstrap_ci(x, n_boot, rng)
+                # pooled rows: bootstrap at the evaluation-seed level (replicates of one seed are not independent)
+                per_seed = np.array([np.nanmean([float(r[k]) for r in rows if r["seed"] == s]) for s in seeds])
+                lo, hi = bootstrap_ci(per_seed, n_boot, rng)
+                valid = x[~np.isnan(x)]
                 item: dict[str, Any] = {
-                    "mean": float(x.mean()),
-                    "std": float(x.std(ddof=1)) if len(x) > 1 else 0.0,
+                    "mean": float(valid.mean()) if len(valid) else float("nan"),
+                    "std": float(valid.std(ddof=1)) if len(valid) > 1 else 0.0,
                     "ci_low": lo,
                     "ci_high": hi,
                 }
                 if base_rows and ctrl != baseline:
-                    b = np.array([float(r[k]) for r in base_rows])
-                    if ctrl == "ppo":  # pooled: compare each seed's episodes to the same evaluation seed
-                        b = np.array([float(next(br for br in base_rows if br["seed"] == r["seed"])[k]) for r in rows])
-                    pct, plo, phi = paired_pct_change(x, b, n_boot, rng)
+                    base_by_seed = {br["seed"]: float(br[k]) for br in base_rows}
+                    common = [s for s in seeds if s in base_by_seed]
+                    reps = max((sum(1 for r in rows if r["seed"] == s) for s in common), default=1)
+                    a = np.full((len(common), reps), np.nan)
+                    for i, s in enumerate(common):
+                        vals = [float(r[k]) for r in rows if r["seed"] == s]
+                        a[i, : len(vals)] = vals
+                    b = np.array([base_by_seed[s] for s in common])
+                    pct, plo, phi = paired_pct_change(a, b, n_boot, rng)
                     item.update({"pct_vs_fixed": pct, "pct_ci_low": plo, "pct_ci_high": phi})
                 entry[k] = item
             summary[ctrl][scen] = entry
@@ -162,6 +192,21 @@ def _pool_ppo(episodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
             d["controller"] = "ppo"
             out.append(d)
     return out
+
+
+def _json_nan_safe(obj: Any) -> str:
+    """json.dumps with NaN/inf rendered as null (valid JSON for the website build)."""
+
+    def clean(o: Any) -> Any:
+        if isinstance(o, float) and (np.isnan(o) or np.isinf(o)):
+            return None
+        if isinstance(o, dict):
+            return {k: clean(v) for k, v in o.items()}
+        if isinstance(o, list):
+            return [clean(v) for v in o]
+        return o
+
+    return json.dumps(clean(obj), indent=1)
 
 
 def write_table(summary: dict[str, Any], path: Path) -> None:
@@ -196,6 +241,8 @@ def run(ecfg: dict[str, Any], only_controllers: list[str] | None = None) -> dict
     scenarios = [str(s) for s in ecfg["scenarios"]]
     eval_seeds = [int(s) for s in cfg.seeds["eval"]][: int(ecfg["episodes_per_scenario"])]
     episode_seconds = ecfg.get("episode_seconds")
+    if episode_seconds is not None and int(episode_seconds) <= cfg.sumo.warmup_seconds:
+        raise ValueError("episode_seconds must be longer than the warm-up")
     controllers: dict[str, dict[str, Any]] = {}
     skipped: dict[str, str] = {}
     for name, spec in ecfg["controllers"].items():
@@ -237,7 +284,7 @@ def run(ecfg: dict[str, Any], only_controllers: list[str] | None = None) -> dict
         "summary": summary,
         "episodes": episodes,
     }
-    (REPO_ROOT / out_dir / "eval_summary.json").write_text(json.dumps(result, indent=1), encoding="utf-8")
+    (REPO_ROOT / out_dir / "eval_summary.json").write_text(_json_nan_safe(result), encoding="utf-8")
     write_table(summary, REPO_ROOT / out_dir / "main_table.csv")
     return result
 

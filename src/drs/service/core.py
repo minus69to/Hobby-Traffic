@@ -73,6 +73,10 @@ class ControllerCore:
         self.fallbacks = 0
         self.latencies: list[float] = []
         self.alarm_state: str | None = None if self.model_loaded else "model_failure"
+        self.shadow_ok = True  # last (shadow) inference met the deadline
+        self.last_tick_wall = time.monotonic()
+        self.last_decided = False
+        self.last_inference_ms: float | None = None
         self.pending_alarm: list[AlarmMessage] = (
             []
             if self.model_loaded
@@ -107,13 +111,12 @@ class ControllerCore:
             out.alarms.append(self._alarm(kind, detail, ts))
 
     def _maybe_recover(self, ts: float, out: CoreOutputs) -> None:
-        if (
-            self.controller == "fixed_time"
-            and self.model_loaded
-            and self.alarm_state in ("stale_detectors", "inference_deadline")
-        ):
+        """Return to RL control once data is fresh and (after a deadline miss) a shadow inference met the deadline."""
+        if self.controller != "fixed_time" or not self.model_loaded:
+            return
+        if self.alarm_state is None and self.shadow_ok:
             self.controller = "rl"
-            self.alarm_state = None
+            self.shadow_ok = False
             out.alarms.append(self._alarm("recovered", "detector data fresh and inference within deadline", ts))
 
     def _command(self, ts: float, requested: int | None, state: str) -> CommandMessage:
@@ -132,40 +135,59 @@ class ControllerCore:
     def on_detectors(self, msg: DetectorMessage) -> CoreOutputs:
         out = CoreOutputs(alarms=list(self.pending_alarm))
         self.pending_alarm = []
-        dt = 1.0 if self.last_msg_time is None else float(np.clip(msg.timestamp - self.last_msg_time, 0.0, 5.0))
-        self.last_msg_time = msg.timestamp
-        self.last_wall = time.monotonic()
+        if self.last_msg_time is None:
+            dt = 1.0
+        elif msg.timestamp <= self.last_msg_time:
+            dt = 0.0  # duplicate or out-of-order message: never advance the timers twice
+        else:
+            dt = float(np.clip(msg.timestamp - self.last_msg_time, 0.0, 5.0))
+        self.last_msg_time = max(msg.timestamp, self.last_msg_time or msg.timestamp)
+        now = time.monotonic()
+        self.last_wall = now
+        self.last_tick_wall = now
+        if self.alarm_state == "stale_detectors":
+            self.alarm_state = None  # data is back; the controller recovers below if the model is healthy
+            out.alarms.append(self._alarm("recovered", "detector data fresh again", msg.timestamp))
         self._maybe_recover(msg.timestamp, out)
         self.since_decision += dt
         requested: int | None = None
+        self.last_decided = False
+        self.last_inference_ms = None
         if self.since_decision >= self.ccfg.decision_interval:
             self.since_decision = 0.0
             self.decision_id += 1
+            self.last_decided = True
             state = junction_state_from_message(msg, self.table, self.lane_arm)
             mask = self.shield.valid_actions()
-            if self.controller == "rl" and self.policy is not None:
+            action: int | None = None
+            if self.model_loaded and self.policy is not None:
+                # the policy runs whenever the model is loaded; in fallback it runs in shadow so that
+                # recovery is only granted after an in-deadline inference
                 obs = observation_vector(state, self.shield, self.cfg.signal, self.junction_index)
                 t0 = time.perf_counter()
                 try:
                     action = int(self.policy.choose(obs.reshape(1, -1), mask.reshape(1, -1))[0])
                     ms = (time.perf_counter() - t0) * 1000.0
                     self.latencies.append(ms)
+                    self.last_inference_ms = ms
                     if ms > self.ccfg.inference_deadline_ms:
+                        self.shadow_ok = False
                         self._enter_fallback(
                             "inference_deadline",
                             f"inference took {ms:.1f} ms > {self.ccfg.inference_deadline_ms} ms",
                             msg.timestamp,
                             out,
                         )
-                        requested = self._fixed_time_request()
                     else:
-                        requested = action
+                        self.shadow_ok = True
+                        if self.alarm_state == "inference_deadline":
+                            self.alarm_state = None
                 except Exception as e:
                     self.model_loaded = False
+                    self.shadow_ok = False
                     self._enter_fallback("model_failure", f"{type(e).__name__}: {e}", msg.timestamp, out)
-                    requested = self._fixed_time_request()
-            else:
-                requested = self._fixed_time_request()
+            self._maybe_recover(msg.timestamp, out)
+            requested = action if (self.controller == "rl" and action is not None) else self._fixed_time_request()
             self.shield.request(requested)
             self.decisions += 1
         state_str = self.shield.tick(dt)
@@ -174,16 +196,21 @@ class ControllerCore:
         return out
 
     def watchdog(self, now_wall: float | None = None, ts: float | None = None) -> CoreOutputs:
-        """Wall-clock check; call periodically. Switches to fixed-time when detectors go stale."""
+        """Wall-clock check; call periodically. Switches to fixed-time when detectors go stale.
+
+        While data is stale the shield is advanced by the real elapsed wall time (clipped to 5 s), so
+        its timers keep their physical meaning whatever the watchdog tick is.
+        """
         out = CoreOutputs()
         now_wall = time.monotonic() if now_wall is None else now_wall
         age = now_wall - self.last_wall
         if age > self.ccfg.stale_after_s:
             t = ts if ts is not None else (self.last_msg_time or 0.0)
             self._enter_fallback("stale_detectors", f"no detector data for {age:.0f} s", t, out)
-            # keep the lamps safe even without data: advance the shield by wall time
+            elapsed = float(np.clip(now_wall - self.last_tick_wall, 0.0, 5.0))
+            self.last_tick_wall = now_wall
             self.shield.request(self._fixed_time_request())
-            state = self.shield.tick(1.0)
+            state = self.shield.tick(elapsed if elapsed > 0 else 1.0)
             out.commands.append(self._command(t, None, state))
         return out
 

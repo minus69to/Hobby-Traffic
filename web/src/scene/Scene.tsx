@@ -46,11 +46,13 @@ export function Scene({
   geometry,
   loaded,
   primary,
+  side,
   domElement,
 }: {
   geometry: Geometry;
   loaded: LoadedReplay;
   primary: boolean;
+  side: 'left' | 'right';
   domElement: HTMLElement | null;
 }) {
   const night = useStore((s) => s.night);
@@ -82,13 +84,16 @@ export function Scene({
   );
   const counter = useMemo(() => laneQueueCounter(geometry), [geometry]);
   // the lane heatmap is React state updated at 2 Hz by the Viewer; here we only compute when asked
-  const queueByLane = useStore((s) => s.time) && heatmap ? counter(loaded, clock.time) : null;
+  const time = useStore((s) => s.time);
+  const queueByLane = useMemo(() => (heatmap ? counter(loaded, time) : null), [heatmap, counter, loaded, time]);
   const onPick = useCallback(
     (tr: Track) => {
-      set({ follow: { id: tr.id, cls: tr.cls, speed: 0, wait: 0 }, camera: 'follow' as CameraPreset });
+      set({ follow: { id: tr.id, cls: tr.cls, speed: 0, wait: 0, side }, camera: 'follow' as CameraPreset });
     },
-    [set],
+    [set, side],
   );
+  // the pane the vehicle was clicked in drives the follow camera (both panes share camShared)
+  const followOwner = follow ? follow.side === side : primary;
   const followPos = useCallback(() => (follow ? (handle.positions.get(follow.id) ?? null) : null), [follow, handle]);
   const followHeading = useCallback(() => {
     if (!follow) return 0;
@@ -100,7 +105,16 @@ export function Scene({
 
   return (
     <>
-      <CameraRig primary={primary} preset={camera} centre={centre} followPos={primary ? followPos : null} followHeading={primary ? followHeading : null} reducedMotion={reducedMotion} domElement={domElement} />
+      <CameraRig
+        primary={primary}
+        followOwner={followOwner}
+        preset={camera}
+        centre={centre}
+        followPos={followOwner ? followPos : null}
+        followHeading={followOwner ? followHeading : null}
+        reducedMotion={reducedMotion}
+        domElement={domElement}
+      />
       <Lighting night={night} centre={centre} />
       <Roads geometry={geometry} night={night} queueByLane={queueByLane} />
       <City geometry={geometry} night={night} />

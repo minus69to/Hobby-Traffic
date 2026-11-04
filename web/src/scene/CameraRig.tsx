@@ -31,6 +31,7 @@ export function presetPose(preset: CameraPreset, centre: [number, number]): { po
 
 export function CameraRig({
   primary,
+  followOwner,
   preset,
   centre,
   followPos,
@@ -39,6 +40,7 @@ export function CameraRig({
   domElement,
 }: {
   primary: boolean;
+  followOwner: boolean;
   preset: CameraPreset;
   centre: [number, number];
   followPos: (() => THREE.Vector3 | null) | null;
@@ -50,33 +52,54 @@ export function CameraRig({
   const controls = useRef<OrbitControlsImpl>(null);
   const { invalidate } = useThree();
   const followSmooth = useRef(new THREE.Vector3());
+  const reducedMotionRef = useRef(reducedMotion);
+  reducedMotionRef.current = reducedMotion;
 
+  // initialise the shared camera once
   useEffect(() => {
-    if (!primary) return;
+    if (camShared.initialised) return;
     const p = presetPose(preset, centre);
-    if (!camShared.initialised) {
+    camShared.pos.copy(p.pos);
+    camShared.target.copy(p.target);
+    camShared.initialised = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // fly to a preset only when the preset (or the network centre) changes, never when the pane roles change
+  useEffect(() => {
+    if (preset === 'follow') {
+      followSmooth.current.copy(camShared.pos);
+      return;
+    }
+    const p = presetPose(preset, centre);
+    camShared.goalPos.copy(p.pos);
+    camShared.goalTarget.copy(p.target);
+    camShared.animating = true;
+    if (reducedMotionRef.current) {
       camShared.pos.copy(p.pos);
       camShared.target.copy(p.target);
-      camShared.initialised = true;
-    }
-    if (preset !== 'follow') {
-      camShared.goalPos.copy(p.pos);
-      camShared.goalTarget.copy(p.target);
-      camShared.animating = true;
-      if (reducedMotion) {
-        camShared.pos.copy(p.pos);
-        camShared.target.copy(p.target);
-        camShared.animating = false;
-      }
+      camShared.animating = false;
     }
     invalidate();
-  }, [preset, centre, primary, reducedMotion, invalidate]);
+  }, [preset, centre, invalidate]);
 
   useFrame((_, delta) => {
     const cam = camRef.current;
     if (!cam) return;
+    if (preset === 'follow' && followOwner && followPos) {
+      const fp = followPos();
+      if (fp) {
+        const h = followHeading ? followHeading() : 0;
+        const yaw = (-h * Math.PI) / 180;
+        const back = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw)).multiplyScalar(14);
+        const goal = fp.clone().add(back).add(new THREE.Vector3(0, 6, 0));
+        followSmooth.current.lerp(goal, Math.min(1, delta * 4));
+        camShared.pos.copy(followSmooth.current);
+        camShared.target.copy(fp).add(new THREE.Vector3(0, 1.2, 0));
+      }
+    }
     if (primary) {
-      if (preset === 'follow' && followPos) {
+      if (preset === 'follow' && followPos && followOwner) {
         const fp = followPos();
         if (fp) {
           const h = followHeading ? followHeading() : 0;

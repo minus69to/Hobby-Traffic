@@ -134,8 +134,11 @@ class SafetyShield:
         """Controller asks for `phase` (None or the current phase = keep). Returns True if accepted."""
         if phase is None or (phase == self.phase and self.mode is Mode.GREEN):
             return True
-        if not isinstance(phase, int | np.integer) or not 0 <= int(phase) < self.n_phases:
-            self._log("rejected_invalid", None if phase is None else int(phase), "phase index out of range")
+        if not isinstance(phase, int | np.integer) or isinstance(phase, bool):
+            self._log("rejected_invalid", None, f"phase is not an integer ({type(phase).__name__})")
+            return False
+        if not 0 <= int(phase) < self.n_phases:
+            self._log("rejected_invalid", int(phase), "phase index out of range")
             return False
         phase = int(phase)
         if self.mode is not Mode.GREEN:

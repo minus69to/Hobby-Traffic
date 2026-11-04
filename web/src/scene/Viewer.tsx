@@ -150,10 +150,10 @@ export function Viewer({ className }: { className?: string }) {
         >
           <Clock />
           <View track={leftRef} index={1}>
-            <Scene geometry={geometry} loaded={left} primary={!split && activeSide === 'left' ? true : split} domElement={el} />
+            <Scene geometry={geometry} loaded={left} primary={!split && activeSide === 'left' ? true : split} side="left" domElement={el} />
           </View>
           <View track={rightRef} index={2}>
-            <Scene geometry={geometry} loaded={right} primary={!split && activeSide === 'right'} domElement={el} />
+            <Scene geometry={geometry} loaded={right} primary={!split && activeSide === 'right'} side="right" domElement={el} />
           </View>
         </Canvas>
       )}
