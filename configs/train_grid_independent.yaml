@@ -3,8 +3,8 @@ sim_config: configs/sim.yaml
 network: grid2x2
 out_dir: models/grid2x2_independent
 seeds: [13]
-total_timesteps: 100000
-n_envs: 4
+total_timesteps: 50000
+n_envs: 2
 policy_kind: mlp
 independent: true
 curriculum:
@@ -30,5 +30,5 @@ reward:
   w_pressure: 0.2
   w_ped_wait: 0.3
   w_switch: 0.05
-eval_every_steps: 16384
+eval_every_steps: 8192
 eval_episodes: 1
