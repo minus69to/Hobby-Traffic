@@ -234,8 +234,10 @@ class SumoSim:
         queue_per_arm = dict.fromkeys(DIRS, 0.0)
         waiting_total = 0.0
         vehicles = 0
+        lane_halting: list[int] = []
         for lane in table.incoming_lanes:
             h = t.lane.getLastStepHaltingNumber(lane)
+            lane_halting.append(int(h))
             queue_per_arm[self._lane_arm[jid][lane]] += h
             waiting_total += t.lane.getWaitingTime(lane)
             vehicles += t.lane.getLastStepVehicleNumber(lane)
@@ -249,6 +251,7 @@ class SumoSim:
             "avg_wait": waiting_total / vehicles if vehicles else 0.0,
             "vehicles": vehicles,
             "ped_waiting": ped_waiting,
+            "lane_halting": lane_halting,
         }
 
     def vehicle_count(self) -> int:

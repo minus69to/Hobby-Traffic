@@ -1,0 +1,12 @@
+sim_config: configs/sim.yaml
+network: single
+out_dir: models/forecast
+scenarios: [offpeak, morning_peak, evening_peak, surge]
+controllers: [fixed_time, max_pressure, ppo]
+ppo_model: models/final/single_seed13
+train_episodes: 8      # training seeds (disjoint from evaluation seeds)
+test_episodes: 4       # held-out evaluation seeds
+history: 60
+epochs: 15
+lr: 1.0e-3
+scale: 20.0
