@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from drs.config import SimConfig
 from drs.controllers.fixed_time import webster_plan
-from drs.demand import enumerate_routes, edge_volumes
+from drs.demand import edge_volumes, enumerate_routes
 from drs.signal import PhaseTable
 from drs.topology import build_spec
 

@@ -82,9 +82,7 @@ def _class_shares(cfg: SimConfig) -> dict[str, float]:
     return shares
 
 
-def write_routes(
-    cfg: SimConfig, spec: NetworkSpec, scenario: str, seed: int, out_path: Path
-) -> dict[str, Any]:
+def write_routes(cfg: SimConfig, spec: NetworkSpec, scenario: str, seed: int, out_path: Path) -> dict[str, Any]:
     """Write a `.rou.xml` for (network, scenario, seed) and return a manifest with expected volumes."""
     scen = cfg.scenario(scenario)
     arms = {k: float(v) for k, v in scen["arms"].items()}

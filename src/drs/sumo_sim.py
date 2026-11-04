@@ -6,6 +6,7 @@ several times faster than socket TraCI.  Only one simulation per process is poss
 
 from __future__ import annotations
 
+import contextlib
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -97,7 +98,9 @@ class SumoSim:
         self._out_lanes: dict[str, list[str]] = {
             jid: sorted({lk.to_lane for lk in self.tables[jid].links if lk.turn != "c"}) for jid in self.junction_ids
         }
-        self._walkingareas: dict[str, list[str]] = {jid: [f":{jid}_w{i}" for i in range(4)] for jid in self.junction_ids}
+        self._walkingareas: dict[str, list[str]] = {
+            jid: [f":{jid}_w{i}" for i in range(4)] for jid in self.junction_ids
+        }
         self.started = False
 
     def _arm_of_lane(self, jid: str, lane: str) -> str:
@@ -111,24 +114,42 @@ class SumoSim:
     def command(self) -> list[str]:
         cmd = [
             sumo_binary("sumo-gui" if self.gui else "sumo"),
-            "-n", str(self.net_xml),
-            "-r", str(self.route_file),
-            "-a", str(self.vtypes),
-            "--seed", str(self.seed),
-            "--step-length", f"{self.step_length:g}",
-            "--lateral-resolution", f"{self.cfg.sumo.lateral_resolution:g}",
-            "--begin", "0",
-            "--end", str(self.episode_seconds + 1),
-            "--no-step-log", "true",
-            "--no-warnings", "true",
-            "--time-to-teleport", "-1",
-            "--waiting-time-memory", "1000",
-            "--pedestrian.model", "striping",
-            "--collision.action", "warn",
-            "--default.emergencydecel", "9",
-            "--xml-validation", "never",
-            "--ignore-junction-blocker", str(self.cfg.sumo.ignore_junction_blocker),
-            "--pedestrian.striping.jamtime", str(self.cfg.sumo.pedestrian_jamtime),
+            "-n",
+            str(self.net_xml),
+            "-r",
+            str(self.route_file),
+            "-a",
+            str(self.vtypes),
+            "--seed",
+            str(self.seed),
+            "--step-length",
+            f"{self.step_length:g}",
+            "--lateral-resolution",
+            f"{self.cfg.sumo.lateral_resolution:g}",
+            "--begin",
+            "0",
+            "--end",
+            str(self.episode_seconds + 1),
+            "--no-step-log",
+            "true",
+            "--no-warnings",
+            "true",
+            "--time-to-teleport",
+            "-1",
+            "--waiting-time-memory",
+            "1000",
+            "--pedestrian.model",
+            "striping",
+            "--collision.action",
+            "warn",
+            "--default.emergencydecel",
+            "9",
+            "--xml-validation",
+            "never",
+            "--ignore-junction-blocker",
+            str(self.cfg.sumo.ignore_junction_blocker),
+            "--pedestrian.striping.jamtime",
+            str(self.cfg.sumo.pedestrian_jamtime),
         ]
         if self.tripinfo is not None:
             cmd += ["--tripinfo-output", str(self.tripinfo), "--tripinfo-output.write-unfinished", "true"]
@@ -147,10 +168,8 @@ class SumoSim:
 
     def close(self) -> None:
         if self.started and self._t is not None:
-            try:
+            with contextlib.suppress(Exception):  # libsumo raises if already closed
                 self._t.close()
-            except Exception:  # pragma: no cover - libsumo raises if already closed
-                pass
         self.started = False
 
     @property
@@ -240,7 +259,12 @@ class SumoSim:
 
 
 def state_to_vector(
-    s: JunctionState, phase_onehot: np.ndarray, time_in_phase: float, in_clearance: bool, junction_onehot: np.ndarray, max_green: float
+    s: JunctionState,
+    phase_onehot: np.ndarray,
+    time_in_phase: float,
+    in_clearance: bool,
+    junction_onehot: np.ndarray,
+    max_green: float,
 ) -> np.ndarray:
     """Flatten a `JunctionState` plus signal status into the policy observation vector."""
     parts = [

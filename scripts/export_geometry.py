@@ -54,7 +54,15 @@ def export(cfg: SimConfig, network: str) -> Path:
     for j in root.iter("junction"):
         if j.get("type") in ("internal",):
             continue
-        junctions.append({"id": j.get("id"), "type": j.get("type"), "x": float(j.get("x", 0)), "y": float(j.get("y", 0)), "shape": parse_shape(j.get("shape"))})
+        junctions.append(
+            {
+                "id": j.get("id"),
+                "type": j.get("type"),
+                "x": float(j.get("x", 0)),
+                "y": float(j.get("y", 0)),
+                "shape": parse_shape(j.get("shape")),
+            }
+        )
     # stop lines + signal heads: end of each inbound vehicle lane
     lane_by_id = {ln["id"]: ln for ln in lanes}
     signals = []
@@ -91,7 +99,10 @@ def export(cfg: SimConfig, network: str) -> Path:
         jid: {
             "n_links": t.n_links,
             "phases": [{"index": p.index, "name": p.name, "state": p.state, "has_walk": p.has_walk} for p in t.phases],
-            "links": [{"index": lk.index, "from": lk.from_lane, "to": lk.to_lane, "arm": lk.arm, "turn": lk.turn} for lk in t.links],
+            "links": [
+                {"index": lk.index, "from": lk.from_lane, "to": lk.to_lane, "arm": lk.arm, "turn": lk.turn}
+                for lk in t.links
+            ],
             "incoming_lanes": t.incoming_lanes,
             "lane_phases": t.lane_phases(),
         }
@@ -104,7 +115,13 @@ def export(cfg: SimConfig, network: str) -> Path:
         "net_offset": offset,
         "bounds": [min(xs), min(ys), max(xs), max(ys)],
         "junction_centres": {jid: [j.x + offset[0], j.y + offset[1]] for jid, j in spec.junctions.items()},
-        "arms": {jid: {d: {"inbound": a.inbound_edge, "outbound": a.outbound_edge, "external": a.external} for d, a in j.arms.items()} for jid, j in spec.junctions.items()},
+        "arms": {
+            jid: {
+                d: {"inbound": a.inbound_edge, "outbound": a.outbound_edge, "external": a.external}
+                for d, a in j.arms.items()
+            }
+            for jid, j in spec.junctions.items()
+        },
         "directions": list(DIRS),
         "lanes": lanes,
         "junctions": junctions,

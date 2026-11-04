@@ -16,7 +16,7 @@ pick what the shield would accept; when the two disagree the shield wins and log
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 
 import numpy as np
 
@@ -24,7 +24,7 @@ from drs.config import SignalConfig
 from drs.signal import PhaseTable
 
 
-class Mode(str, Enum):
+class Mode(StrEnum):
     GREEN = "green"
     YELLOW = "yellow"
     ALL_RED = "all_red"
@@ -132,7 +132,7 @@ class SafetyShield:
 
     def request(self, phase: int | None) -> bool:
         """Controller asks for `phase` (None or the current phase = keep). Returns True if accepted."""
-        if phase is None or phase == self.phase and self.mode is Mode.GREEN:
+        if phase is None or (phase == self.phase and self.mode is Mode.GREEN):
             return True
         if not isinstance(phase, int | np.integer) or not 0 <= int(phase) < self.n_phases:
             self._log("rejected_invalid", None if phase is None else int(phase), "phase index out of range")

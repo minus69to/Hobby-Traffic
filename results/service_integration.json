@@ -1,0 +1,15 @@
+{
+ "steps": 300,
+ "commands": 300,
+ "misses": 0,
+ "alarms": [
+  {
+   "schema_version": "1.0",
+   "junction_id": "C",
+   "timestamp": 0.0,
+   "kind": "model_failure",
+   "detail": "no model configured"
+  }
+ ],
+ "wall_s": 27.1
+}

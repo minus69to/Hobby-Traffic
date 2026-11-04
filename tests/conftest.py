@@ -9,9 +9,9 @@ import pytest
 
 os.environ.setdefault("LIBSUMO_AS_TRACI", "1")
 
-from drs.config import REPO_ROOT, SignalConfig, SimConfig  # noqa: E402
-from drs.signal import PhaseTable, load_phase_tables  # noqa: E402
-from drs.topology import build_spec  # noqa: E402
+from drs.config import REPO_ROOT, SignalConfig, SimConfig
+from drs.signal import PhaseTable, load_phase_tables
+from drs.topology import build_spec
 
 
 @pytest.fixture(scope="session")

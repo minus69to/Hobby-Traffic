@@ -24,7 +24,9 @@ from drs.runner import run_episode
 OUT_DIR = REPO_ROOT / "web" / "public" / "data" / "replays"
 
 
-def make_one(ecfg: dict[str, Any], network: str, scenario: str, ctrl_name: str, seed: int, dt: float, out_dir: Path) -> dict[str, Any]:
+def make_one(
+    ecfg: dict[str, Any], network: str, scenario: str, ctrl_name: str, seed: int, dt: float, out_dir: Path
+) -> dict[str, Any]:
     cfg = SimConfig.load(ecfg["sim_config"])
     rec_holder: dict[str, FrameRecorder] = {}
 
@@ -33,7 +35,17 @@ def make_one(ecfg: dict[str, Any], network: str, scenario: str, ctrl_name: str, 
             rec_holder["r"] = FrameRecorder(dt, sim.junction_ids)
         rec_holder["r"].on_step(sim, states)
 
-    env = TrafficSignalEnv(cfg, network, scenario, [seed], step_length=dt, record=True, step_hook=hook, rng_seed=seed, tripinfo_dir=out_dir / "tmp")
+    env = TrafficSignalEnv(
+        cfg,
+        network,
+        scenario,
+        [seed],
+        step_length=dt,
+        record=True,
+        step_hook=hook,
+        rng_seed=seed,
+        tripinfo_dir=out_dir / "tmp",
+    )
     ctrl = build_controller(cfg, ecfg["controllers"][ctrl_name], ctrl_name)
     t0 = time.perf_counter()
     ep = run_episode(env, ctrl, scenario=scenario, seed=seed)
@@ -82,14 +94,22 @@ def main() -> None:
     rp = ecfg["replay"]
     network = args.network or str(ecfg["network"])
     index_path = OUT_DIR / "index.json"
-    index: dict[str, Any] = json.loads(index_path.read_text(encoding="utf-8")) if index_path.exists() else {"replays": []}
+    index: dict[str, Any] = (
+        json.loads(index_path.read_text(encoding="utf-8")) if index_path.exists() else {"replays": []}
+    )
     for scenario in args.scenarios or rp["scenarios"]:
         for ctrl in args.controllers or rp["controllers"]:
             m = make_one(ecfg, network, scenario, ctrl, int(rp["seed"]), float(rp.get("sample_interval", 0.5)), OUT_DIR)
             index["replays"] = [r for r in index["replays"] if r["file"] != m["file"]] + [
-                {k: m[k] for k in ("network", "scenario", "controller", "seed", "file", "size_bytes", "n_frames", "n_tracks")}
+                {
+                    k: m[k]
+                    for k in ("network", "scenario", "controller", "seed", "file", "size_bytes", "n_frames", "n_tracks")
+                }
             ]
-            print(f"{m['file']}: {m['size_bytes'] / 1e6:.2f} MB, {m['n_frames']} frames, {m['n_tracks']} tracks, {m['wall_s']} s")
+            print(
+                f"{m['file']}: {m['size_bytes'] / 1e6:.2f} MB, {m['n_frames']} frames, "
+                f"{m['n_tracks']} tracks, {m['wall_s']} s"
+            )
     index_path.write_text(json.dumps(index, indent=1), encoding="utf-8")
     (OUT_DIR / "tmp").rmdir() if (OUT_DIR / "tmp").exists() and not any((OUT_DIR / "tmp").iterdir()) else None
 

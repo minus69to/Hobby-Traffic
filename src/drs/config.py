@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -141,7 +142,7 @@ def sumo_binary(name: str = "sumo") -> str:
         candidates.append(Path(sumo_pkg.__file__).parent / "bin" / name)
     except ImportError:  # pragma: no cover - only when the pip package is missing
         pass
-    candidates.append(Path(os.sys.executable).parent / name)
+    candidates.append(Path(sys.executable).parent / name)
     for c in candidates:
         if c.exists():
             return str(c)

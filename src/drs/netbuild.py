@@ -45,17 +45,28 @@ def run_netconvert(spec: NetworkSpec, out_dir: Path, lefthand: bool = True) -> P
     net = out_dir / f"{spec.name}.net.xml"
     cmd = [
         sumo_binary("netconvert"),
-        "--node-files", str(nod),
-        "--edge-files", str(edg),
-        "--output-file", str(net),
-        "--no-turnarounds", "true",
-        "--crossings.guess", "true",
-        "--walkingareas", "true",
-        "--junctions.corner-detail", "5",
-        "--default.junctions.radius", "12",
-        "--tls.default-type", "static",
-        "--no-internal-links", "false",
-        "--junctions.join", "false",
+        "--node-files",
+        str(nod),
+        "--edge-files",
+        str(edg),
+        "--output-file",
+        str(net),
+        "--no-turnarounds",
+        "true",
+        "--crossings.guess",
+        "true",
+        "--walkingareas",
+        "true",
+        "--junctions.corner-detail",
+        "5",
+        "--default.junctions.radius",
+        "12",
+        "--tls.default-type",
+        "static",
+        "--no-internal-links",
+        "false",
+        "--junctions.join",
+        "false",
     ]
     if lefthand:
         cmd += ["--lefthand", "true"]
@@ -67,8 +78,18 @@ def write_vtypes(cfg: SimConfig, out_path: Path) -> Path:
     """Write ``dhaka.add.xml`` with one ``vType`` per vehicle class from the config."""
     out_path.parent.mkdir(parents=True, exist_ok=True)
     attrs_order = [
-        "vClass", "length", "width", "maxSpeed", "accel", "decel", "sigma", "minGapLat",
-        "latAlignment", "lcPushy", "lcStrategic", "color",
+        "vClass",
+        "length",
+        "width",
+        "maxSpeed",
+        "accel",
+        "decel",
+        "sigma",
+        "minGapLat",
+        "latAlignment",
+        "lcPushy",
+        "lcStrategic",
+        "color",
     ]
     with out_path.open("w", encoding="utf-8") as fh:
         fh.write('<?xml version="1.0" encoding="UTF-8"?>\n')
@@ -80,7 +101,7 @@ def write_vtypes(cfg: SimConfig, out_path: Path) -> Path:
                 if key in params:
                     parts.append(f"{key}={quoteattr(str(params[key]))}")
             if name != "pedestrian":
-                parts.append('guiShape="passenger"' if name == "car" else f'guiShape={quoteattr(_gui_shape(name))}')
+                parts.append('guiShape="passenger"' if name == "car" else f"guiShape={quoteattr(_gui_shape(name))}")
             fh.write("  <vType " + " ".join(parts) + "/>\n")
         fh.write("</additional>\n")
     return out_path
@@ -88,8 +109,12 @@ def write_vtypes(cfg: SimConfig, out_path: Path) -> Path:
 
 def _gui_shape(name: str) -> str:
     return {
-        "bus": "bus", "bus_dd": "bus", "truck": "truck", "motorcycle": "motorcycle",
-        "cng": "passenger/hatchback", "rickshaw": "moped",
+        "bus": "bus",
+        "bus_dd": "bus",
+        "truck": "truck",
+        "motorcycle": "motorcycle",
+        "cng": "passenger/hatchback",
+        "rickshaw": "moped",
     }.get(name, "passenger")
 
 

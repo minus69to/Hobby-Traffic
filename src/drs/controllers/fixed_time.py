@@ -29,9 +29,7 @@ def average_pcu(cfg: SimConfig) -> float:
     return sum(float(cfg.vtypes[c]["pcu"]) * share for c, share in mix.items())
 
 
-def webster_plan(
-    cfg: SimConfig, table: PhaseTable, edge_vph: dict[str, float], turns: list[float]
-) -> list[int]:
+def webster_plan(cfg: SimConfig, table: PhaseTable, edge_vph: dict[str, float], turns: list[float]) -> list[int]:
     """Green time (s) per phase for one junction."""
     sig = cfg.signal
     pcu = average_pcu(cfg)

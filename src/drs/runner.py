@@ -6,7 +6,9 @@ from drs.controllers.base import Controller
 from drs.env import EpisodeRecord, TrafficSignalEnv
 
 
-def run_episode(env: TrafficSignalEnv, controller: Controller, scenario: str | None = None, seed: int | None = None) -> EpisodeRecord:
+def run_episode(
+    env: TrafficSignalEnv, controller: Controller, scenario: str | None = None, seed: int | None = None
+) -> EpisodeRecord:
     obs = env.reset(scenario=scenario, seed=seed)
     controller.reset(env)
     done = False

@@ -32,7 +32,7 @@ def test_observation_and_mask_shapes() -> None:
     assert obs.shape == (1, env.obs_dim)
     assert env.action_masks().shape == (1, 4)
     assert env.action_masks()[0].tolist() == [True, False, False, False]
-    obs2, rew, done, infos = env.step([0])
+    obs2, rew, done, _infos = env.step([0])
     assert obs2.shape == obs.shape and rew.shape == (1,) and not done
     assert np.isfinite(obs2).all()
     env.close()

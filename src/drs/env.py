@@ -256,7 +256,7 @@ class TrafficSignalEnv:
 
     def _advance(self, seconds: int) -> None:
         assert self.sim is not None
-        n = int(round(seconds / self.step_length))
+        n = round(seconds / self.step_length)
         for _ in range(n):
             shown = {jid: self.shields[jid].tick(self.step_length) for jid in self.junction_ids}
             for jid, state in shown.items():
@@ -269,7 +269,7 @@ class TrafficSignalEnv:
                 if abs(t - round(t)) < 1e-6:  # once per simulated second
                     for jid in self.junction_ids:
                         m = self.sim.per_second_metrics(jid)
-                        m["t"] = int(round(t))
+                        m["t"] = round(t)
                         self.record_data.per_second[jid].append(m)
                         self.record_data.tls_states[jid].append(self.shields[jid].current_state())
                         if t > self.cfg.sumo.warmup_seconds:
@@ -300,9 +300,11 @@ class SingleJunctionGymEnv(gym.Env[np.ndarray, int]):
         super().__init__()
         self.env = env
         self.observation_space = gym.spaces.Box(-5.0, 5.0, shape=(env.obs_dim,), dtype=np.float32)
-        self.action_space = gym.spaces.Discrete(env.n_phases)
+        self.action_space = gym.spaces.Discrete(env.n_phases)  # type: ignore[assignment]
 
-    def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None) -> tuple[np.ndarray, dict[str, Any]]:
+    def reset(
+        self, *, seed: int | None = None, options: dict[str, Any] | None = None
+    ) -> tuple[np.ndarray, dict[str, Any]]:
         obs = self.env.reset()
         return obs[0], {}
 
@@ -311,7 +313,7 @@ class SingleJunctionGymEnv(gym.Env[np.ndarray, int]):
         return obs[0], float(rew[0]), done, False, infos[0]
 
     def action_masks(self) -> np.ndarray:
-        return self.env.action_masks()[0]
+        return np.asarray(self.env.action_masks()[0])
 
     def close(self) -> None:
         self.env.close()
