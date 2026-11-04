@@ -1,0 +1,31 @@
+sim_config: configs/sim.yaml
+network: single
+out_dir: models/single
+seeds: [13, 42, 2026]
+total_timesteps: 300000
+n_envs: 4
+curriculum:                 # (scenario weights) switched at fractions of total_timesteps
+  - {until: 0.25, scenarios: {offpeak: 1.0}}
+  - {until: 0.60, scenarios: {offpeak: 0.2, morning_peak: 0.4, evening_peak: 0.4}}
+  - {until: 1.00, scenarios: {offpeak: 0.15, morning_peak: 0.3, evening_peak: 0.3, incident: 0.15, surge: 0.1}}
+ppo:
+  policy_layers: [128, 128]
+  activation: tanh
+  n_steps: 1024
+  batch_size: 256
+  n_epochs: 10
+  learning_rate: 3.0e-4
+  lr_linear_decay: true
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_range: 0.2
+  ent_coef: 0.01
+  vf_coef: 0.5
+  max_grad_norm: 0.5
+reward:
+  w_wait_delta: 1.0         # weight on change in total waiting time (per 100 veh-s)
+  w_pressure: 0.2
+  w_ped_wait: 0.3
+  w_switch: 0.05
+eval_every_steps: 20480     # evaluate on the validation seed every N env steps and keep the best
+eval_episodes: 1

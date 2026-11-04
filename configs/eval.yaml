@@ -1,0 +1,18 @@
+sim_config: configs/sim.yaml
+network: single
+out_dir: results
+controllers:
+  fixed_time: {type: fixed_time}
+  max_pressure: {type: max_pressure}
+  ppo_s13: {type: ppo, model: models/final/single_seed13}
+  ppo_s42: {type: ppo, model: models/final/single_seed42}
+  ppo_s2026: {type: ppo, model: models/final/single_seed2026}
+scenarios: [offpeak, morning_peak, evening_peak, incident, surge, noisy]
+episodes_per_scenario: 10
+n_workers: 4
+bootstrap_samples: 2000
+replay:
+  seed: 20260
+  sample_interval: 0.5
+  scenarios: [morning_peak, incident]
+  controllers: [fixed_time, ppo_s13]

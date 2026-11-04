@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Synthetic vehicle types inspired by Dhaka traffic. Parameters are assumptions,
+     not measurements. See configs/sim.yaml and DECISIONS.md. -->
+<additional>
+  <vType id="car" vClass="passenger" length="4.3" width="1.8" maxSpeed="13.9" accel="2.4" decel="4.5" sigma="0.5" minGapLat="0.6" latAlignment="arbitrary" lcPushy="0.5" lcStrategic="1.0" color="0.85,0.85,0.9" guiShape="passenger"/>
+  <vType id="bus" vClass="bus" length="11.0" width="2.5" maxSpeed="11.1" accel="1.2" decel="3.5" sigma="0.4" minGapLat="0.8" latAlignment="arbitrary" lcPushy="0.2" lcStrategic="1.0" color="0.2,0.5,0.9" guiShape="bus"/>
+  <vType id="bus_dd" vClass="bus" length="11.0" width="2.5" maxSpeed="10.0" accel="1.0" decel="3.5" sigma="0.4" minGapLat="0.8" latAlignment="arbitrary" lcPushy="0.2" lcStrategic="1.0" color="0.85,0.1,0.1" guiShape="bus"/>
+  <vType id="truck" vClass="truck" length="8.5" width="2.4" maxSpeed="11.1" accel="1.0" decel="3.5" sigma="0.4" minGapLat="0.8" latAlignment="arbitrary" lcPushy="0.1" lcStrategic="1.0" color="0.5,0.5,0.4" guiShape="truck"/>
+  <vType id="motorcycle" vClass="motorcycle" length="2.0" width="0.8" maxSpeed="13.9" accel="3.0" decel="5.0" sigma="0.6" minGapLat="0.3" latAlignment="arbitrary" lcPushy="1.0" lcStrategic="1.0" color="0.1,0.1,0.1" guiShape="motorcycle"/>
+  <vType id="cng" vClass="taxi" length="2.7" width="1.4" maxSpeed="9.7" accel="1.8" decel="4.0" sigma="0.6" minGapLat="0.4" latAlignment="arbitrary" lcPushy="0.8" lcStrategic="1.0" color="0.1,0.6,0.2" guiShape="passenger/hatchback"/>
+  <vType id="rickshaw" vClass="moped" length="2.4" width="1.2" maxSpeed="3.3" accel="0.8" decel="2.0" sigma="0.7" minGapLat="0.4" latAlignment="arbitrary" lcPushy="0.6" lcStrategic="0.8" color="0.9,0.6,0.1" guiShape="moped"/>
+  <vType id="pedestrian" vClass="pedestrian" length="0.4" width="0.6" maxSpeed="1.4" accel="1.0" decel="1.0" sigma="0.0" minGapLat="0.2" latAlignment="arbitrary" lcPushy="0.0" lcStrategic="0.0" color="0.9,0.8,0.6"/>
+</additional>

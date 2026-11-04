@@ -1,0 +1,68 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "drs"
+version = "0.1.0"
+description = "Safe deep RL traffic signals for Dhaka-like mixed traffic (synthetic SUMO study)"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Souvik Mandol" }]
+dependencies = [
+  "eclipse-sumo",
+  "libsumo",
+  "traci",
+  "sumolib",
+  "gymnasium",
+  "stable-baselines3>=2.3",
+  "sb3-contrib",
+  "torch",
+  "onnx",
+  "onnxruntime",
+  "numpy",
+  "pandas",
+  "scipy",
+  "matplotlib",
+  "pyyaml",
+  "fastapi",
+  "uvicorn",
+  "aiomqtt",
+  "paho-mqtt",
+  "prometheus-client",
+  "pydantic>=2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-timeout", "hypothesis", "ruff", "mypy", "types-PyYAML", "pandas-stubs", "httpx", "tensorboard"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "W", "SIM", "RUF"]
+ignore = ["RUF012", "B905", "SIM108"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_ignores = false
+ignore_missing_imports = true
+files = ["src/drs", "scripts"]
+exclude = ["web/"]
+
+[[tool.mypy.overrides]]
+module = ["libsumo", "traci", "sumolib", "sumolib.*", "sb3_contrib", "sb3_contrib.*", "stable_baselines3", "stable_baselines3.*", "gymnasium", "gymnasium.*", "onnxruntime", "onnxruntime.*", "onnx", "onnx.*", "torch", "torch.*", "aiomqtt", "paho", "paho.*", "scipy", "scipy.*", "matplotlib", "matplotlib.*", "prometheus_client"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+timeout = 600
+addopts = "-q"
+markers = ["slow: slow tests requiring SUMO runs", "integration: integration tests requiring a broker"]

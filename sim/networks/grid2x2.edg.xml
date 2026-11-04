@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<edges>
+  <edge id="B00S_J00" from="B00S" to="J00" numLanes="3" speed="13.89" sidewalkWidth="2.50"/>
+  <edge id="B00W_J00" from="B00W" to="J00" numLanes="3" speed="13.89" sidewalkWidth="2.50"/>
+  <edge id="B01E_J01" from="B01E" to="J01" numLanes="3" speed="13.89" sidewalkWidth="2.50"/>
+  <edge id="B01S_J01" from="B01S" to="J01" numLanes="3" speed="13.89" sidewalkWidth="2.50"/>
+  <edge id="B10N_J10" from="B10N" to="J10" numLanes="3" speed="13.89" sidewalkWidth="2.50"/>
+  <edge id="B10W_J10" from="B10W" to="J10" numLanes="3" speed="13.89" sidewalkWidth="2.50"/>
+  <edge id="B11E_J11" from="B11E" to="J11" numLanes="3" speed="13.89" sidewalkWidth="2.50"/>
+  <edge id="B11N_J11" from="B11N" to="J11" numLanes="3" speed="13.89" sidewalkWidth="2.50"/>
+  <edge id="J00_B00S" from="J00" to="B00S" numLanes="3" speed="13.89" sidewalkWidth="2.50"/>
+  <edge id="J00_B00W" from="J00" to="B00W" numLanes="3" speed="13.89" sidewalkWidth="2.50"/>
+  <edge id="J00_J01" from="J00" to="J01" numLanes="3" speed="13.89" sidewalkWidth="2.50"/>
+  <edge id="J00_J10" from="J00" to="J10" numLanes="3" speed="13.89" sidewalkWidth="2.50"/>
+  <edge id="J01_B01E" from="J01" to="B01E" numLanes="3" speed="13.89" sidewalkWidth="2.50"/>
+  <edge id="J01_B01S" from="J01" to="B01S" numLanes="3" speed="13.89" sidewalkWidth="2.50"/>
+  <edge id="J01_J00" from="J01" to="J00" numLanes="3" speed="13.89" sidewalkWidth="2.50"/>
+  <edge id="J01_J11" from="J01" to="J11" numLanes="3" speed="13.89" sidewalkWidth="2.50"/>
+  <edge id="J10_B10N" from="J10" to="B10N" numLanes="3" speed="13.89" sidewalkWidth="2.50"/>
+  <edge id="J10_B10W" from="J10" to="B10W" numLanes="3" speed="13.89" sidewalkWidth="2.50"/>
+  <edge id="J10_J00" from="J10" to="J00" numLanes="3" speed="13.89" sidewalkWidth="2.50"/>
+  <edge id="J10_J11" from="J10" to="J11" numLanes="3" speed="13.89" sidewalkWidth="2.50"/>
+  <edge id="J11_B11E" from="J11" to="B11E" numLanes="3" speed="13.89" sidewalkWidth="2.50"/>
+  <edge id="J11_B11N" from="J11" to="B11N" numLanes="3" speed="13.89" sidewalkWidth="2.50"/>
+  <edge id="J11_J01" from="J11" to="J01" numLanes="3" speed="13.89" sidewalkWidth="2.50"/>
+  <edge id="J11_J10" from="J11" to="J10" numLanes="3" speed="13.89" sidewalkWidth="2.50"/>
+</edges>
