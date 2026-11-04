@@ -102,6 +102,8 @@ class TrafficSignalEnv:
         tripinfo_dir: Path | None = None,
         fcd_path: Path | None = None,
         step_hook: Callable[[SumoSim, dict[str, str]], None] | None = None,
+        neighbour_obs: bool = False,
+        neighbour_info: bool = True,
     ) -> None:
         self.cfg = cfg
         self.network = network
@@ -117,11 +119,13 @@ class TrafficSignalEnv:
         self.tripinfo_dir = tripinfo_dir
         self.fcd_path = fcd_path
         self.step_hook = step_hook
+        self.neighbour_obs = neighbour_obs
+        self.neighbour_info = neighbour_info  # False: the agent gets no information about other junctions
         self.sim: SumoSim | None = None
         self.shields: dict[str, SafetyShield] = {}
         self.junction_ids: list[str] = []
         self.n_phases = cfg.signal.n_phases
-        self.obs_dim = observation_size(12, self.n_phases, MAX_JUNCTIONS)
+        self.obs_dim = observation_size(12, self.n_phases, MAX_JUNCTIONS) + (4 * 49 if neighbour_obs else 0)
         self.scenario = ""
         self.seed = 0
         self._prev_wait: dict[str, float] = {}
@@ -203,22 +207,34 @@ class TrafficSignalEnv:
             np_ = np.zeros(4)
             for k, d in enumerate(DIRS):
                 arm = self.sim.spec.junctions[jid].arms[d]
-                if not arm.external:
+                if not arm.external and self.neighbour_info:
                     np_[k] = pressures.get(arm.neighbour, 0.0)
             s.neighbour_pressure = np_
         self.last_states = states
 
     def _observations(self) -> np.ndarray:
         obs = np.zeros((self.n_agents, self.obs_dim), dtype=np.float32)
+        base: dict[str, np.ndarray] = {}
         for k, jid in enumerate(self.junction_ids):
             sh = self.shields[jid]
             onehot = np.zeros(self.n_phases)
             onehot[sh.phase if not sh.in_clearance else sh.target] = 1.0
             jonehot = np.zeros(MAX_JUNCTIONS)
             jonehot[k % MAX_JUNCTIONS] = 1.0
-            obs[k] = state_to_vector(
+            base[jid] = state_to_vector(
                 self.last_states[jid], onehot, sh.time_in_green, sh.in_clearance, jonehot, self.cfg.signal.max_green
             )
+        nb = len(next(iter(base.values()))) if base else 0
+        for k, jid in enumerate(self.junction_ids):
+            obs[k, :nb] = base[jid]
+            if self.neighbour_obs and self.sim is not None:
+                # local features (lane queues, waits, class counts = first 48 values) of each neighbour + presence flag
+                for a, d in enumerate(DIRS):
+                    arm = self.sim.spec.junctions[jid].arms[d]
+                    off = nb + a * 49
+                    if not arm.external and arm.neighbour in base:
+                        obs[k, off : off + 48] = base[arm.neighbour][:48]
+                        obs[k, off + 48] = 1.0
         return obs
 
     def action_masks(self) -> np.ndarray:
