@@ -38,6 +38,9 @@ class Resolver:
         self.train = load("training_summary.json")
         self.speed = load("speedtest.json")
         self.service = load("service_integration.json")
+        self.forecast = load("forecast.json")
+        self.imitation = load("imitation.json")
+        self.grid = load("grid/eval_summary.json")
         self.missing: list[str] = []
 
     def value(self, key: str) -> Any:
@@ -72,6 +75,32 @@ class Resolver:
             return self.speed[parts[1]]
         if root == "service":
             return self.service[parts[1]]
+        if root == "forecast":  # forecast.<model>.<h30|h60>.<mae|rmse|mae_ci_low|mae_ci_high> or forecast.meta.<field>
+            if parts[1] == "meta":
+                return self.forecast[parts[2]]
+            m = self.forecast["models"][parts[1]][parts[2]]
+            if parts[3].endswith("_ci_low"):
+                return m[parts[3][: -len("_ci_low")] + "_ci"][0]
+            if parts[3].endswith("_ci_high"):
+                return m[parts[3][: -len("_ci_high")] + "_ci"][1]
+            return m[parts[3]]
+        if root == "imitation":  # imitation.<run>.<best|wall_min|bc_val_acc|bc_samples|first_return|last_return>
+            r = self.imitation["runs"][parts[1]]
+            f = parts[2]
+            if f == "best":
+                return r["best_validation_return"]
+            if f == "wall_min":
+                return r["wall_clock_s"] / 60.0
+            if f == "first_return":
+                return r["eval_rows"][0]["return"]
+            if f == "last_return":
+                return r["eval_rows"][-1]["return"]
+            if f == "return_at_100k":
+                return next(x["return"] for x in r["eval_rows"] if x["timesteps"] >= 100000)
+            return r[f]
+        if root == "grid":  # grid.<controller>.<scenario>.<metric>.<field>
+            ctrl, scen, metric, field_ = parts[1], parts[2], parts[3], parts[4] if len(parts) > 4 else "mean"
+            return self.grid["summary"][ctrl][scen][metric][field_]
         raise KeyError(key)
 
     def render(self, text: str) -> str:
