@@ -17,6 +17,10 @@ from drs.sumo_sim import JunctionState
 
 
 def phase_pressures(table: PhaseTable, s: JunctionState) -> np.ndarray:
+    """Pressure per phase: sum over its green vehicle movements of (queue in - queue out).
+
+    Shared lanes (through + right turn) count for every phase that serves one of their movements.
+    """
     lane_q = dict(zip(s.lanes, s.lane_halting))
     out = np.zeros(table.n_phases)
     for p in table.phases:
@@ -37,13 +41,33 @@ class MaxPressureController:
         self.tables = dict(env.sim.tables)
 
     def act(
-        self, states: dict[str, JunctionState], obs: np.ndarray, masks: np.ndarray, shields: dict[str, SafetyShield]
+        self,
+        states: dict[str, JunctionState],
+        obs: np.ndarray,
+        masks: np.ndarray,
+        shields: dict[str, SafetyShield],
     ) -> list[int]:
+        """Textbook max-pressure: request the admissible phase with the largest pressure.
+
+        Known weakness in this lefthand layout: the protected right turn shares a lane with the
+        through movement, so the through phases always dominate and the shared lane discharges only
+        when the shield's max-green forces a rotation; this costs capacity at low demand. The
+        behaviour is kept deliberately (it is the canonical algorithm) and reported as is.
+        """
         out = []
         for k, (jid, sh) in enumerate(shields.items()):
-            pressures = phase_pressures(self.tables[jid], states[jid])
-            # small hysteresis: keep the current phase unless another is clearly better
-            pressures[sh.phase] += 1.0
+            table = self.tables[jid]
+            if sh.in_clearance:
+                out.append(sh.target)
+                continue
+            pressures = phase_pressures(table, states[jid])
+            if pressures.max() <= 0.0:
+                # nothing queued anywhere: rest on a through phase instead of cycling empty phases
+                through = [p.index for p in table.phases if p.has_walk] or [0]
+                target = sh.phase if sh.phase in through else through[0]
+                out.append(target if masks[k][target] else int(np.argmax(masks[k])))
+                continue
+            pressures[sh.phase] += 1.0  # small hysteresis
             pressures[~masks[k]] = -np.inf
             out.append(int(np.argmax(pressures)))
         return out
