@@ -9,6 +9,7 @@ Gymnasium wrapper for the single-junction case is provided in :class:`SingleJunc
 from __future__ import annotations
 
 import tempfile
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -99,6 +100,7 @@ class TrafficSignalEnv:
         record: bool = False,
         tripinfo_dir: Path | None = None,
         fcd_path: Path | None = None,
+        step_hook: Callable[[SumoSim, dict[str, str]], None] | None = None,
     ) -> None:
         self.cfg = cfg
         self.network = network
@@ -113,6 +115,7 @@ class TrafficSignalEnv:
         self.record = record
         self.tripinfo_dir = tripinfo_dir
         self.fcd_path = fcd_path
+        self.step_hook = step_hook
         self.sim: SumoSim | None = None
         self.shields: dict[str, SafetyShield] = {}
         self.junction_ids: list[str] = []
@@ -255,9 +258,12 @@ class TrafficSignalEnv:
         assert self.sim is not None
         n = int(round(seconds / self.step_length))
         for _ in range(n):
-            for jid in self.junction_ids:
-                self.sim.set_state(jid, self.shields[jid].tick(self.step_length))
+            shown = {jid: self.shields[jid].tick(self.step_length) for jid in self.junction_ids}
+            for jid, state in shown.items():
+                self.sim.set_state(jid, state)
             self.sim.step()
+            if self.step_hook is not None:
+                self.step_hook(self.sim, shown)
             if self.record and self.record_data is not None:
                 t = self.sim.time
                 if abs(t - round(t)) < 1e-6:  # once per simulated second
