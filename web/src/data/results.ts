@@ -119,7 +119,7 @@ export function stat(ctrl: string, scen: string, metric: string): MetricStat | n
   const e = EVAL.summary[ctrl]?.[scen];
   if (!e) return null;
   const v = e[metric];
-  return typeof v === 'object' ? v : null;
+  return typeof v === 'object' && v !== null ? v : null;
 }
 
 export function fmt(x: number | undefined | null, digits = 1): string {
