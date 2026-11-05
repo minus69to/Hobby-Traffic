@@ -80,10 +80,10 @@ items. Two confirmed items could not be applied to runs already in progress, see
 
 ## Status checklist (filled at M9)
 
-- [ ] `make lint test` passes
-- [ ] `make reproduce` runs end to end
-- [ ] `npm run build` and the Playwright smoke test pass with no console errors
-- [ ] `scripts/check_numbers.py` passes
-- [ ] property-based tests rerun with more examples: zero violations
-- [ ] repository searched for anything resembling proprietary deployment material
-- [ ] `ALL DELIVERABLES PUSHED` written to PROGRESS.md
+- [x] `make lint test` passes (ruff, mypy, 32 unit tests; slow and integration tests also green)
+- [x] `make reproduce` runs end to end (small budget, exit 0)
+- [x] `npm run build` and the Playwright smoke test pass with no console errors
+- [x] `scripts/check_numbers.py` passes (README, report and web bundle vs results/)
+- [x] property-based tests rerun with `HYPOTHESIS_PROFILE=thorough` (2,000 examples): zero violations
+- [x] repository searched for anything resembling proprietary deployment material: nothing found
+- [ ] `ALL DELIVERABLES PUSHED` written to PROGRESS.md (last step)
