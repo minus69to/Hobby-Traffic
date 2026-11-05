@@ -157,16 +157,50 @@ Table 1 gives the morning peak; the full table for every scenario and metric is 
 | Surge | [[eval.fixed_time.surge.mean_waiting_time.mean:.1f]] | [[eval.max_pressure.surge.mean_waiting_time.mean:.1f]] | [[eval.ppo.surge.mean_waiting_time.mean:.1f]] | [[eval.ppo.surge.mean_waiting_time.pct_vs_fixed:pct]] [[[eval.ppo.surge.mean_waiting_time.pct_ci_low:pct]], [[eval.ppo.surge.mean_waiting_time.pct_ci_high:pct]]] |
 | Noisy sensors | [[eval.fixed_time.noisy.mean_waiting_time.mean:.1f]] | [[eval.max_pressure.noisy.mean_waiting_time.mean:.1f]] | [[eval.ppo.noisy.mean_waiting_time.mean:.1f]] | [[eval.ppo.noisy.mean_waiting_time.pct_vs_fixed:pct]] [[[eval.ppo.noisy.mean_waiting_time.pct_ci_low:pct]], [[eval.ppo.noisy.mean_waiting_time.pct_ci_high:pct]]] |
 
-Per-seed results: the three PPO seeds reach morning-peak mean waiting times of
-[[eval.ppo_s13.morning_peak.mean_waiting_time.mean:.1f]] s (seed 13),
-[[eval.ppo_s42.morning_peak.mean_waiting_time.mean:.1f]] s (seed 42) and
-[[eval.ppo_s2026.morning_peak.mean_waiting_time.mean:.1f]] s (seed 2026).
+Per-seed results: the two trained PPO seeds reach morning-peak mean waiting times of
+[[eval.ppo_s13.morning_peak.mean_waiting_time.mean:.1f]] s (seed 13,
+[[eval.ppo_s13.morning_peak.mean_waiting_time.pct_vs_fixed:pct]] vs fixed-time) and
+[[eval.ppo_s42.morning_peak.mean_waiting_time.mean:.1f]] s (seed 42,
+[[eval.ppo_s42.morning_peak.mean_waiting_time.pct_vs_fixed:pct]]); the third planned seed did not
+train (`DECISIONS.md` 12).
 
 ![Mean waiting time per scenario](../figures/wait_by_scenario.png)
 
 ![Vehicles waiting over time in the morning peak](../figures/wait_over_time.png)
 
-[[RESULTS_DISCUSSION]]
+**Reading the results honestly.** The synthetic peaks are heavily oversaturated: under every
+controller a share of [[eval.fixed_time.morning_peak.unfinished_share.mean:.2f]] (fixed-time) to
+[[eval.ppo_s42.morning_peak.unfinished_share.mean:.2f]] (PPO seed 42) of the vehicles scheduled after
+the warm-up has not completed its trip when the hour ends, and vehicles wait
+[[eval.fixed_time.morning_peak.mean_depart_delay.mean:.0f]] s (fixed-time) to
+[[eval.max_pressure.morning_peak.mean_depart_delay.mean:.0f]] s (max-pressure) in SUMO's insertion
+queue before they even enter the 300 m approach. The waiting-time means in Tables 1 and 2 are over
+*completed* trips only, so they must be read together with throughput and the insertion delay:
+max-pressure's low waiting time of completed trips in the peaks goes with the highest insertion delay,
+i.e. it keeps the approach lanes moving by serving the longest queues while the backlog grows behind
+them. Throughput, the least selective metric, is
+[[eval.fixed_time.morning_peak.throughput.mean:.0f]] veh/h for fixed-time,
+[[eval.max_pressure.morning_peak.throughput.mean:.0f]] for max-pressure and
+[[eval.ppo.morning_peak.throughput.mean:.0f]] for the pooled PPO policy
+([[eval.ppo.morning_peak.throughput.pct_vs_fixed:pct]], CI
+[[eval.ppo.morning_peak.throughput.pct_ci_low:pct]] to
+[[eval.ppo.morning_peak.throughput.pct_ci_high:pct]]).
+
+With the CPU budget used here (two seeds, 300k steps each) the safe PPO policy does **not** beat the
+baselines: pooled over seeds it changes the morning-peak waiting time by
+[[eval.ppo.morning_peak.mean_waiting_time.pct_vs_fixed:pct]] (CI
+[[eval.ppo.morning_peak.mean_waiting_time.pct_ci_low:pct]] to
+[[eval.ppo.morning_peak.mean_waiting_time.pct_ci_high:pct]]) relative to fixed-time, with seed 13
+slightly better and seed 42 clearly worse than fixed-time, and max-pressure is far ahead on waiting
+time in every scenario. Where the learned policy does differ from fixed-time is pedestrians: its
+pedestrian mean wait in the morning peak is [[eval.ppo.morning_peak.ped_mean_wait.mean:.1f]] s vs
+[[eval.fixed_time.morning_peak.ped_mean_wait.mean:.1f]] s
+([[eval.ppo.morning_peak.ped_mean_wait.pct_vs_fixed:pct]]), because the pedestrian term of the reward
+makes it return to the walk phases more often ([[eval.ppo.morning_peak.phase_switches_per_hour.mean:.0f]]
+switches per hour vs [[eval.fixed_time.morning_peak.phase_switches_per_hour.mean:.0f]]), at the price
+of more lost time per cycle. The safety claim holds independently of performance: the shield recorded
+[[eval.ppo.morning_peak.shield_interventions.mean:.2f]] interventions per PPO episode (the mask kept
+every sampled action admissible), and zero for both baselines.
 
 ## 7. Robustness and fairness across vehicle classes
 
@@ -188,7 +222,16 @@ tends to starve.
 
 ![Waiting time per vehicle class](../figures/fairness_by_class.png)
 
-[[FAIRNESS_DISCUSSION]]
+Across classes the ranking is the same as for the aggregate: max-pressure lowest, then fixed-time
+and PPO close together. The PPO policy does not starve the slow classes relative to fixed-time (rickshaw
+[[eval.ppo.morning_peak.wait_rickshaw.pct_vs_fixed:pct]], bus
+[[eval.ppo.morning_peak.wait_bus.pct_vs_fixed:pct]] vs fixed-time), but it also does not favour them:
+with vehicle counts per class in the observation and no class weights in the reward, there is no
+incentive to do so. In the noisy-sensor scenario the pooled PPO waiting time changes by
+[[eval.ppo.noisy.mean_waiting_time.pct_vs_fixed:pct]] vs fixed-time against
+[[eval.ppo.morning_peak.mean_waiting_time.pct_vs_fixed:pct]] on the clean morning peak, so Gaussian
+noise and 5 % dropped readings cost the policy a few percent; max-pressure, which also consumes the noisy
+readings, keeps its advantage ([[eval.max_pressure.noisy.mean_waiting_time.pct_vs_fixed:pct]]).
 
 ## 8. Edge deployment benchmarks
 
