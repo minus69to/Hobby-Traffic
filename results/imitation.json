@@ -1,1 +1,153 @@
-{"runs":{},"note":"placeholder until the BC comparison runs"}
+{
+ "runs": {
+  "ppo_scratch": {
+   "eval_rows": [
+    {
+     "timesteps": 20480,
+     "wall_s": 256.1,
+     "return": -1655.42
+    },
+    {
+     "timesteps": 40960,
+     "wall_s": 403.4,
+     "return": -1452.188
+    },
+    {
+     "timesteps": 61440,
+     "wall_s": 548.3,
+     "return": -1624.964
+    },
+    {
+     "timesteps": 81920,
+     "wall_s": 747.6,
+     "return": -1439.356
+    },
+    {
+     "timesteps": 102400,
+     "wall_s": 1211.6,
+     "return": -1613.278
+    },
+    {
+     "timesteps": 122880,
+     "wall_s": 1700.2,
+     "return": -1392.474
+    },
+    {
+     "timesteps": 143360,
+     "wall_s": 2130.7,
+     "return": -1471.856
+    },
+    {
+     "timesteps": 163840,
+     "wall_s": 2703.3,
+     "return": -1423.314
+    },
+    {
+     "timesteps": 184320,
+     "wall_s": 3195.0,
+     "return": -1298.896
+    },
+    {
+     "timesteps": 204800,
+     "wall_s": 3640.8,
+     "return": -1265.938
+    },
+    {
+     "timesteps": 225280,
+     "wall_s": 4065.3,
+     "return": -1342.46
+    },
+    {
+     "timesteps": 245760,
+     "wall_s": 4507.3,
+     "return": -1337.838
+    },
+    {
+     "timesteps": 266240,
+     "wall_s": 4927.5,
+     "return": -1447.026
+    },
+    {
+     "timesteps": 286720,
+     "wall_s": 5357.2,
+     "return": -1321.888
+    }
+   ],
+   "wall_clock_s": 5666.9,
+   "best_validation_return": -1265.9379948710557,
+   "completed": true
+  },
+  "bc_ppo": {
+   "eval_rows": [
+    {
+     "timesteps": 20480,
+     "wall_s": 263.5,
+     "return": -2107.534
+    },
+    {
+     "timesteps": 40960,
+     "wall_s": 537.1,
+     "return": -6011.806
+    },
+    {
+     "timesteps": 61440,
+     "wall_s": 855.1,
+     "return": -6251.968
+    },
+    {
+     "timesteps": 81920,
+     "wall_s": 1230.1,
+     "return": -1829.728
+    },
+    {
+     "timesteps": 102400,
+     "wall_s": 1978.8,
+     "return": -1520.402
+    },
+    {
+     "timesteps": 122880,
+     "wall_s": 2674.6,
+     "return": -1417.974
+    },
+    {
+     "timesteps": 143360,
+     "wall_s": 3354.8,
+     "return": -1358.426
+    },
+    {
+     "timesteps": 163840,
+     "wall_s": 3956.5,
+     "return": -1455.608
+    },
+    {
+     "timesteps": 184320,
+     "wall_s": 4615.4,
+     "return": -1341.756
+    },
+    {
+     "timesteps": 204800,
+     "wall_s": 5255.0,
+     "return": -1282.842
+    },
+    {
+     "timesteps": 225280,
+     "wall_s": 5930.9,
+     "return": -1350.456
+    },
+    {
+     "timesteps": 245760,
+     "wall_s": 6600.8,
+     "return": -1407.342
+    }
+   ],
+   "wall_clock_s": 6600.8,
+   "best_validation_return": -1282.842,
+   "completed": false,
+   "note": "interrupted after 245760 steps (VM restart)",
+   "bc_val_acc": 0.9722222089767456,
+   "bc_samples": 5760,
+   "bc_wall_s": 217.3
+  }
+ },
+ "note": "Validation return on a held-out morning-peak seed vs environment steps and wall-clock; same seed, budget and hyper-parameters."
+}
