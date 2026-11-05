@@ -63,8 +63,8 @@ class EnvFactory:
             reward=self.reward,
             rng_seed=self.rng_seed,
             episode_seconds=self.episode_seconds,
-            neighbour_obs=self.neighbour_obs,
-            neighbour_info=self.neighbour_info,
+            neighbour_obs=getattr(self, "neighbour_obs", False),  # tolerate factories pickled by older code
+            neighbour_info=getattr(self, "neighbour_info", True),
         )
 
 
