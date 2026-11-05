@@ -254,20 +254,10 @@ policies; class-aware fairness objectives; transfer to other South Asian cities 
 
 ## Appendix A. Additional learning components
 
-**A.1 Queue forecasting (supervised).** Per-lane queues (halting vehicles) were logged every second
-from [[forecast.meta.n_train_windows:int]] training windows (training seeds, fixed-time, max-pressure
-and PPO control) and evaluated on [[forecast.meta.n_test_windows:int]] windows from held-out seeds.
-Inputs: the last [[forecast.meta.history_s]] s of all 12 lane queues plus the phase one-hot; targets:
-each lane's queue 30 s and 60 s ahead. MAE in vehicles with 95 % bootstrap CIs over held-out episodes:
-last value [[forecast.last_value.h30.mae:.2f]] / [[forecast.last_value.h60.mae:.2f]]
-([[forecast.last_value.h60.mae_ci_low:.2f]] to [[forecast.last_value.h60.mae_ci_high:.2f]] at 60 s),
-moving average [[forecast.moving_average.h30.mae:.2f]] / [[forecast.moving_average.h60.mae:.2f]],
-GRU [[forecast.gru.h30.mae:.2f]] / [[forecast.gru.h60.mae:.2f]]
-([[forecast.gru.h60.mae_ci_low:.2f]] to [[forecast.gru.h60.mae_ci_high:.2f]] at 60 s),
-TCN [[forecast.tcn.h30.mae:.2f]] / [[forecast.tcn.h60.mae:.2f]]
-([[forecast.tcn.h60.mae_ci_low:.2f]] to [[forecast.tcn.h60.mae_ci_high:.2f]] at 60 s).
-RMSE at 60 s: last value [[forecast.last_value.h60.rmse:.2f]], GRU [[forecast.gru.h60.rmse:.2f]],
-TCN [[forecast.tcn.h60.rmse:.2f]].
+**A.1 Queue forecasting (supervised).** Implemented in `src/drs/forecast.py` (per-lane queue
+logging, windowing, naive baselines, a GRU and a causal TCN with bootstrap CIs over held-out
+episodes) with unit tests, but **not executed**: the development VM restarted on the deadline day
+and the remaining budget went to the core evaluation. No forecasting numbers are reported.
 
 **A.2 Imitation-learning warm start.** [[imitation.bc_ppo.bc_samples:int]] (observation, mask,
 action) tuples from the max-pressure controller on training seeds were used to train the policy MLP
@@ -276,25 +266,15 @@ and the dataset's observation statistics initialise MaskablePPO. With the same s
 hyper-parameters, the validation return at the first evaluation is
 [[imitation.ppo_scratch.first_return:.0f]] from scratch vs [[imitation.bc_ppo.first_return:.0f]] with
 the warm start, at 100k steps [[imitation.ppo_scratch.return_at_100k:.0f]] vs
-[[imitation.bc_ppo.return_at_100k:.0f]], and the best validation return over the run is
-[[imitation.ppo_scratch.best:.0f]] vs [[imitation.bc_ppo.best:.0f]]
-(wall-clock [[imitation.ppo_scratch.wall_min:.0f]] vs [[imitation.bc_ppo.wall_min:.0f]] min).
+[[imitation.bc_ppo.return_at_100k:.0f]], and the best validation return is
+[[imitation.ppo_scratch.best:.0f]] (full run) vs [[imitation.bc_ppo.best:.0f]] (the warm-started
+run was interrupted by a VM restart after 245k of 300k steps, so its curve is compared on the
+overlapping window only).
 
 ![Learning curves: PPO from scratch vs behaviour-cloning warm start](../figures/imitation_curves.png)
 
-**A.3 Graph coordination on the 2x2 grid.** Three parameter-shared policies were trained for one
-seed on `grid2x2`: *independent* (no information about neighbouring junctions), *shared MLP* (the
-single-junction observation plus neighbour pressure per arm) and *GNN* (a graph-attention encoder over
-the raw local features of the neighbouring junctions, `src/drs/gnn.py`). Morning-peak mean waiting
-time: fixed-time [[grid.fixed_time.morning_peak.mean_waiting_time.mean:.1f]] s, max-pressure
-[[grid.max_pressure.morning_peak.mean_waiting_time.mean:.1f]] s, independent PPO
-[[grid.ppo_independent.morning_peak.mean_waiting_time.mean:.1f]] s
-([[grid.ppo_independent.morning_peak.mean_waiting_time.pct_vs_fixed:pct]] vs fixed-time), shared MLP
-[[grid.ppo_shared.morning_peak.mean_waiting_time.mean:.1f]] s
-([[grid.ppo_shared.morning_peak.mean_waiting_time.pct_vs_fixed:pct]]), GNN
-[[grid.ppo_gnn.morning_peak.mean_waiting_time.mean:.1f]] s
-([[grid.ppo_gnn.morning_peak.mean_waiting_time.pct_vs_fixed:pct]]); off-peak: independent
-[[grid.ppo_independent.offpeak.mean_waiting_time.pct_vs_fixed:pct]], shared
-[[grid.ppo_shared.offpeak.mean_waiting_time.pct_vs_fixed:pct]], GNN
-[[grid.ppo_gnn.offpeak.mean_waiting_time.pct_vs_fixed:pct]]. These are single-seed, short-budget
-runs and should be read as a feasibility comparison, not a ranking.
+**A.3 Graph coordination on the 2x2 grid.** The `grid2x2` network, the parameter-shared
+multi-junction environment, the neighbour-observation layout and the graph-attention encoder
+(`src/drs/gnn.py`) are implemented and unit-tested, and three variant configs exist
+(`configs/train_grid_{independent,shared,gnn}.yaml`), but the grid runs were **not executed** for the
+same reason as A.1. No grid numbers are reported.

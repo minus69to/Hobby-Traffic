@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import csv
 import json
 from pathlib import Path
+from typing import Any
 
 import matplotlib
 
@@ -30,16 +32,33 @@ def main() -> None:
     fig, axes = plt.subplots(1, 2, figsize=(9, 3.2))
     for name, d in RUNS.items():
         meta_path = d / "train_meta.json"
-        if not meta_path.exists():
+        progress = d / "progress.csv"
+        entry: dict[str, Any]
+        if meta_path.exists():
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            entry = {
+                "eval_rows": [
+                    {"timesteps": r["timesteps"], "wall_s": r["wall_s"], "return": r["return"]}
+                    for r in meta["eval_rows"]
+                ],
+                "wall_clock_s": meta["wall_clock_s"],
+                "best_validation_return": meta["best_validation_return"],
+                "completed": True,
+            }
+        elif progress.exists():  # run interrupted: use the evaluation rows logged so far
+            with progress.open(encoding="utf-8") as fh:
+                rows = [{k: float(v) for k, v in r.items() if v not in ("", None)} for r in csv.DictReader(fh)]
+            entry = {
+                "eval_rows": [
+                    {"timesteps": int(r["timesteps"]), "wall_s": r["wall_s"], "return": r["return"]} for r in rows
+                ],
+                "wall_clock_s": rows[-1]["wall_s"] if rows else 0.0,
+                "best_validation_return": max(r["return"] for r in rows) if rows else None,
+                "completed": False,
+                "note": f"interrupted after {int(rows[-1]['timesteps']) if rows else 0} steps (VM restart)",
+            }
+        else:
             continue
-        meta = json.loads(meta_path.read_text(encoding="utf-8"))
-        entry = {
-            "eval_rows": [
-                {"timesteps": r["timesteps"], "wall_s": r["wall_s"], "return": r["return"]} for r in meta["eval_rows"]
-            ],
-            "wall_clock_s": meta["wall_clock_s"],
-            "best_validation_return": meta["best_validation_return"],
-        }
         bc_meta = d.parent / "bc_meta.json"
         if bc_meta.exists():
             bm = json.loads(bc_meta.read_text(encoding="utf-8"))
