@@ -148,7 +148,8 @@ def _check_trace(table: PhaseTable, cfg: SignalConfig, actions: list[int]) -> No
             if k + 1 < len(runs):
                 assert runs[k + 1][0] == "r"
                 assert runs[k + 1][1] == cfg.all_red or (last_run and runs[k + 1][1] <= cfg.all_red)
-    assert sh.stats.switches == sum(1 for kind, _ in runs if kind == "y")
+    completed_switches = sum(1 for kind, _ in runs if kind == "y") - (1 if sh.in_clearance else 0)
+    assert sh.stats.switches == completed_switches  # a switch counts once the new green is reached
 
 
 @settings(max_examples=300, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
