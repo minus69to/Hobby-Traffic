@@ -157,12 +157,14 @@ Table 1 gives the morning peak; the full table for every scenario and metric is 
 | Surge | [[eval.fixed_time.surge.mean_waiting_time.mean:.1f]] | [[eval.max_pressure.surge.mean_waiting_time.mean:.1f]] | [[eval.ppo.surge.mean_waiting_time.mean:.1f]] | [[eval.ppo.surge.mean_waiting_time.pct_vs_fixed:pct]] [[[eval.ppo.surge.mean_waiting_time.pct_ci_low:pct]], [[eval.ppo.surge.mean_waiting_time.pct_ci_high:pct]]] |
 | Noisy sensors | [[eval.fixed_time.noisy.mean_waiting_time.mean:.1f]] | [[eval.max_pressure.noisy.mean_waiting_time.mean:.1f]] | [[eval.ppo.noisy.mean_waiting_time.mean:.1f]] | [[eval.ppo.noisy.mean_waiting_time.pct_vs_fixed:pct]] [[[eval.ppo.noisy.mean_waiting_time.pct_ci_low:pct]], [[eval.ppo.noisy.mean_waiting_time.pct_ci_high:pct]]] |
 
-Per-seed results: the two trained PPO seeds reach morning-peak mean waiting times of
+Per-seed results: the three PPO seeds reach morning-peak mean waiting times of
 [[eval.ppo_s13.morning_peak.mean_waiting_time.mean:.1f]] s (seed 13,
-[[eval.ppo_s13.morning_peak.mean_waiting_time.pct_vs_fixed:pct]] vs fixed-time) and
+[[eval.ppo_s13.morning_peak.mean_waiting_time.pct_vs_fixed:pct]] vs fixed-time),
 [[eval.ppo_s42.morning_peak.mean_waiting_time.mean:.1f]] s (seed 42,
-[[eval.ppo_s42.morning_peak.mean_waiting_time.pct_vs_fixed:pct]]); the third planned seed did not
-train (`DECISIONS.md` 12).
+[[eval.ppo_s42.morning_peak.mean_waiting_time.pct_vs_fixed:pct]]) and
+[[eval.ppo_s2026.morning_peak.mean_waiting_time.mean:.1f]] s (seed 2026,
+[[eval.ppo_s2026.morning_peak.mean_waiting_time.pct_vs_fixed:pct]]); seed 2026 was trained after the
+deadline as follow-up work (`DECISIONS.md` 12).
 
 ![Mean waiting time per scenario](../figures/wait_by_scenario.png)
 
@@ -186,12 +188,11 @@ them. Throughput, the least selective metric, is
 [[eval.ppo.morning_peak.throughput.pct_ci_low:pct]] to
 [[eval.ppo.morning_peak.throughput.pct_ci_high:pct]]).
 
-With the CPU budget used here (two seeds, 300k steps each) the safe PPO policy does **not** beat the
-baselines: pooled over seeds it changes the morning-peak waiting time by
+With the CPU budget used here (three seeds, 300k steps each) the safe PPO policy does **not** beat the
+baselines: pooled over the three seeds it changes the morning-peak waiting time by
 [[eval.ppo.morning_peak.mean_waiting_time.pct_vs_fixed:pct]] (CI
 [[eval.ppo.morning_peak.mean_waiting_time.pct_ci_low:pct]] to
-[[eval.ppo.morning_peak.mean_waiting_time.pct_ci_high:pct]]) relative to fixed-time, with seed 13
-slightly better and seed 42 clearly worse than fixed-time, and max-pressure is far ahead on waiting
+[[eval.ppo.morning_peak.mean_waiting_time.pct_ci_high:pct]]) relative to fixed-time, with a visible spread between seeds, and max-pressure is far ahead on waiting
 time in every scenario. Where the learned policy does differ from fixed-time is pedestrians: its
 pedestrian mean wait in the morning peak is [[eval.ppo.morning_peak.ped_mean_wait.mean:.1f]] s vs
 [[eval.fixed_time.morning_peak.ped_mean_wait.mean:.1f]] s
@@ -297,10 +298,26 @@ policies; class-aware fairness objectives; transfer to other South Asian cities 
 
 ## Appendix A. Additional learning components
 
-**A.1 Queue forecasting (supervised).** Implemented in `src/drs/forecast.py` (per-lane queue
-logging, windowing, naive baselines, a GRU and a causal TCN with bootstrap CIs over held-out
-episodes) with unit tests, but **not executed**: the development VM restarted on the deadline day
-and the remaining budget went to the core evaluation. No forecasting numbers are reported.
+**A.1 Queue forecasting (supervised).** Per-lane queues (halting vehicles) were logged every second
+from eight training-seed episodes (fixed-time, max-pressure and PPO control, four scenarios) and
+evaluated on four held-out-seed episodes: [[forecast.meta.n_train_windows:int]] training and
+[[forecast.meta.n_test_windows:int]] test windows. Inputs: the last [[forecast.meta.history_s]] s of
+all 12 lane queues plus the phase one-hot; targets: each lane's queue 30 s and 60 s ahead. MAE in
+vehicles (95 % bootstrap CIs over held-out episodes): last value
+[[forecast.last_value.h30.mae:.2f]] / [[forecast.last_value.h60.mae:.2f]]
+([[forecast.last_value.h60.mae_ci_low:.2f]] to [[forecast.last_value.h60.mae_ci_high:.2f]] at 60 s),
+moving average [[forecast.moving_average.h30.mae:.2f]] / [[forecast.moving_average.h60.mae:.2f]],
+GRU [[forecast.gru.h30.mae:.2f]] / [[forecast.gru.h60.mae:.2f]]
+([[forecast.gru.h60.mae_ci_low:.2f]] to [[forecast.gru.h60.mae_ci_high:.2f]] at 60 s),
+TCN [[forecast.tcn.h30.mae:.2f]] / [[forecast.tcn.h60.mae:.2f]]
+([[forecast.tcn.h60.mae_ci_low:.2f]] to [[forecast.tcn.h60.mae_ci_high:.2f]] at 60 s).
+RMSE at 60 s: last value [[forecast.last_value.h60.rmse:.2f]], GRU [[forecast.gru.h60.rmse:.2f]],
+TCN [[forecast.tcn.h60.rmse:.2f]]. Both networks roughly halve the error of the naive baselines at
+both horizons; the GRU and the TCN are within each other's confidence intervals. The
+forecast-augmented PPO variant (forecasts appended to the observation) was not trained within the
+budget.
+
+![Queue forecasting error by model and horizon](../figures/forecast_mae.png)
 
 **A.2 Imitation-learning warm start.** [[imitation.bc_ppo.bc_samples:int]] (observation, mask,
 action) tuples from the max-pressure controller on training seeds were used to train the policy MLP

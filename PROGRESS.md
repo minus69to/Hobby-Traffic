@@ -22,3 +22,4 @@ Timestamped (UTC) log of work on `dhaka-rl-signals`. If interrupted, read `SPEC.
 - 2026-11-05 05:45 M7 done: media captured headless with SwiftShader (hero.gif 1.6 MB, split_morning_peak.mp4, incident.mp4, four PNGs in docs/media), committed. Final push of all deliverables.
 
 ALL DELIVERABLES PUSHED
+- 2026-11-05 10:40 Follow-up (branch `followup-runs`): forecasting experiment run (GRU/TCN halve the naive baselines' error), seed 2026 trained (300k steps), three-seed evaluation rerun (300 episodes), figures/docs/site re-rendered, check_numbers green. Bangla guides added (docs/GUIDE_bn.md, docs/WEBSITE_TEST_bn.md).
