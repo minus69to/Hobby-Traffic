@@ -44,7 +44,9 @@ def check_web_bundle() -> list[str]:
             probes.append(("edge/int8/latency_p50_ms", json.dumps(edge["int8"]["latency_p50_ms"])))
             probes.append(("edge/int8/size_bytes", json.dumps(edge["int8"]["size_bytes"])))
     for name, literal in probes:
-        if literal not in bundle:
+        # bundlers may minify 0.0121 to .0121; accept either spelling
+        variants = {literal, literal[1:] if literal.startswith("0.") else literal}
+        if not any(v in bundle for v in variants):
             problems.append(f"website bundle does not contain {name}={literal} (rebuild with `make web`)")
     return problems
 

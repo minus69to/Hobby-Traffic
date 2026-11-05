@@ -1,0 +1,323 @@
+<!-- Rendered from docs/templates/report.md.in by `make docs`; every number comes from results/. -->
+
+# Safe Deep Reinforcement Learning for Traffic Signals in Dhaka-like Mixed Traffic: a Synthetic Simulation Study
+
+**Souvik Mandol**
+
+## Abstract
+
+Traffic in Dhaka is lane-less, heterogeneous and slow: buses, cars, motorcycles, CNG auto-rickshaws
+and cycle-rickshaws weave between lanes while pedestrians cross wherever the signal lets them. We
+build a synthetic SUMO model of such a junction (sublane model, left-hand traffic, six vehicle
+classes, signalised crossings) and train a MaskablePPO signal controller that is safe by
+construction: an action mask restricts the policy to admissible phase changes, and a runtime safety
+shield, an explicit finite-state machine shared by every controller including the deployed service,
+enforces minimum and maximum greens, inserts yellow and all-red, and rejects conflicting greens.
+Across six demand scenarios (off-peak, morning and evening peaks, a lane-blocking incident, a 20 %
+surge and noisy sensors) with 10 evaluation episodes each on seeds disjoint
+from training, the pooled three-seed policy changes mean vehicle waiting time in the morning peak by
++3.6% (95 % CI
++0.4% to
++7.0%) relative to a Webster fixed-time plan,
+with 0.00 shield interventions per episode. The
+policy exports to a 31.5 kB int8 ONNX model with
+99.51% action agreement and sub-millisecond single-thread latency, and
+runs inside an MQTT controller service with a fixed-time watchdog fallback. All demand and vehicle
+parameters are assumptions; nothing is validated against real data.
+
+## 1. Problem and motivation
+
+Signal control research is usually evaluated on lane-disciplined, car-dominated traffic. Dhaka-like
+traffic breaks three of the usual assumptions: (i) vehicles of very different size and speed share
+the same lanes and pass each other inside a lane, so a lane queue is not a queue of equals; (ii) the
+slowest class, the cycle-rickshaw at about 12 km/h, is a large share of the flow and discharges
+slowly, so a controller that counts vehicles can starve it; (iii) pedestrian volumes are high and
+pedestrians interact with turning vehicles at the crossings. A learned controller for this setting
+must see classes, not just counts, must treat pedestrians as first-class users, and must never be
+allowed to produce an unsafe signal sequence, because a learned policy cannot be certified by
+inspection.
+
+## 2. Related work
+
+Learning-based signal control builds on simulation environments such as SUMO-RL [sumo-rl] and the
+SUMO simulator [sumo]. PressLight [presslight] learns a max-pressure-like control that coordinates
+arterial signals, and CoLight [colight] adds graph attention for network-level cooperation; both
+assume homogeneous traffic. The max-pressure rule used as a baseline here follows the formulation
+used as a baseline in [presslight]. Our policy optimisation uses the PPO implementation of
+Stable-Baselines3 [sb3] and its contrib package's MaskablePPO [sb3-contrib], which samples actions
+only from a mask supplied by the environment. The runtime shield is an application of the classic
+idea of a safety automaton between a learned agent and the plant; we implement it as a small
+finite-state machine specific to signal timing and verify it with property-based testing.
+(Citations were verified against official pages; references whose pages were unreachable from the
+development environment are deliberately not cited, see `docs/CITATIONS_VERIFIED.md`.)
+
+## 3. Simulation design
+
+**Networks.** Plain SUMO XML built with netconvert in left-hand mode: a 4-arm junction `single`
+with three vehicle lanes per approach (left+through, through, through+right in driving direction),
+300 m approaches, sidewalks and zebra crossings on every arm, and a 2x2 grid of such junctions
+250 m apart (`grid2x2`). Phases are built programmatically from the network's connection list:
+north-south through (+ yielding left turns, east/west crossings walk), north-south right turns,
+east-west through (+ yielding left turns, north/south crossings walk), east-west right turns; yellow
+3 s and all-red 2 s are inserted by the shield.
+
+**Vehicles.** The SUMO sublane model with 0.8 m lateral resolution lets motorcycles, CNGs and
+rickshaws weave and share lanes. Vehicle types (`sim/vtypes/dhaka.add.xml`) are documented
+assumptions: car, bus (with a red double-decker variant), truck, motorcycle (high lateral agility),
+CNG auto-rickshaw (short, slow, agile), cycle-rickshaw (3.3 m/s, wide) and pedestrians. The default
+mix is 22 % cars, 25 % motorcycles, 20 % CNG, 15 % rickshaws, 12 % buses and 6 % trucks.
+
+**Demand.** Seeded flows per class and route from turning ratios (0.2/0.6/0.2). Scenarios:
+off-peak, morning peak (heavier inbound), evening peak (heavier outbound), incident (morning peak
+with one lane of the north approach blocked by a broken-down truck for 15 min), surge (+20 %) and
+noisy sensors (morning peak with Gaussian noise and 5 % dropped detector readings). Episodes last
+3,600 s; the first 300 s are excluded from metrics. Training, validation and evaluation seeds are
+disjoint (`configs/sim.yaml`). With the sublane model and interacting pedestrians, a controller that
+starves a movement can deadlock the junction box; `--ignore-junction-blocker 30` and a pedestrian
+jam time of 60 s remove the deadlock while teleporting stays disabled (`DECISIONS.md`).
+
+**Baselines.** A Webster-style fixed-time plan computed from the expected volumes per inbound edge
+(cycle `C = (1.5L + 5)/(1 - Y)`, greens split by critical flow ratio, clamped to the min/max green),
+and a max-pressure controller that requests the phase with the largest sum of (incoming queue -
+outgoing queue) over its movements, subject to the same mask and shield as the learned policy.
+
+## 4. Method
+
+**Observation** (66 values per junction): normalised halting count and maximum consecutive waiting
+time per incoming lane (12 lanes), vehicle counts per class per approach (4 x 6), current phase
+one-hot, time in phase, a clearance flag, pedestrians waiting per corner, neighbour pressure per arm
+(zero on the single junction) and a junction-id one-hot for parameter sharing on the grid.
+
+**Action.** The next green phase (4 discrete actions; choosing the current phase keeps it). Decisions
+every 5 s.
+
+**Reward.** `r = -w_wait * dW/100 - w_pressure * max(P, 0)/100 - w_ped * N_ped/10 - w_switch * s`,
+where `dW` is the change in accumulated waiting time of vehicles on the incoming lanes, `P` the
+junction pressure, `N_ped` the number of waiting pedestrians and `s` a switch indicator;
+weights 1.0, 0.2, 0.3, 0.05 (`configs/train.yaml`, rationale in `DECISIONS.md`).
+
+**Masking.** The shield exposes a boolean mask: during yellow/all-red only the target phase is valid;
+before `min_green` (10 s) or the pedestrian walk minimum (8 s) only "keep" is valid; at `max_green`
+(60 s) "keep" is invalid. MaskablePPO renormalises its categorical policy over the valid set.
+
+**Safety shield.** States `GREEN(p)`, `YELLOW(p -> q)`, `ALL_RED(q)`. A request is accepted only in
+`GREEN` after `min_green`, if the target phase is in the table and has no mutually conflicting
+protected greens (conflict matrix read from the network). Requests during clearance are ignored and
+logged; a green that reaches `max_green` is switched to the next phase even without any controller.
+The same object produces the mask, so policy and shield cannot disagree silently; when they do, the
+shield wins and the event is counted. Property-based tests (`hypothesis`, 300 random action
+sequences plus 100 random timing parameterisations) assert: no conflicting greens, every green between
+min and max, every switch preceded by the full yellow + all-red clearance.
+
+**Training.** MaskablePPO, MLP 2 x 128 tanh, `n_steps` 1024, batch 256, 10 epochs, learning rate
+3e-4 with linear decay, gamma 0.99, GAE 0.95, clip 0.2, entropy 0.01, four parallel SUMO workers,
+observation and reward normalisation (VecNormalize, saved with the policy). Curriculum: off-peak,
+then peaks, then a mixture including the incident and surge. Seeds 13, 42,
+300,000 environment steps each, 112 min per seed on
+4 CPU cores (45.7 env steps/s); the checkpoint with the best validation
+return (one morning-peak episode on a held-out seed every 20,480 steps) is kept.
+
+## 5. Experimental setup
+
+Controllers: fixed-time, max-pressure, PPO (three seeds, reported individually and pooled).
+Scenarios: the six above. 10 episodes per scenario and controller on the
+evaluation seeds, 240 episodes in total. Metrics from SUMO tripinfo output (unfinished
+trips included) and per-second recordings: mean and 95th percentile travel time, mean waiting time,
+mean queue length, throughput, per-class waiting time, pedestrian mean wait (personinfo waiting
+time), shield interventions, phase switches per hour. Means, standard deviations and 95 % bootstrap
+confidence intervals (2,000 resamples); percentage changes vs fixed-time use a paired bootstrap over
+the shared evaluation seeds.
+
+## 6. Results
+
+Table 1 gives the morning peak; the full table for every scenario and metric is in
+`results/main_table.csv` and the interactive charts on the website.
+
+**Table 1. Morning peak, mean over 10 episodes [95 % CI].**
+
+| Metric | Fixed-time | Max-pressure | Safe PPO (pooled) | PPO vs fixed-time |
+|---|---|---|---|---|
+| Mean waiting time (s) | 303.3 [296.9, 309.7] | 100.4 [91.6, 110.1] | 314.1 [308.4, 319.6] | +3.6% [+0.4%, +7.0%] |
+| Mean travel time (s) | 503.8 | 278.7 | 571.1 | +13.4% |
+| 95th pct travel time (s) | 1133.6 | 491.0 | 1064.3 | -6.1% |
+| Mean queue (veh) | 269.4 | 240.8 | 256.0 | -4.9% |
+| Throughput (veh) | 2706 | 2683 | 2484 | -8.2% |
+| Pedestrian mean wait (s) | 17.5 | 4.5 | 10.5 | -39.7% |
+| Shield interventions | 0.00 | 0.00 | 0.00 | |
+| Phase switches / h | 87 | 206 | 182 | |
+
+**Table 2. Mean waiting time (s) per scenario, PPO change vs fixed-time [95 % CI].**
+
+| Scenario | Fixed-time | Max-pressure | Safe PPO | PPO vs fixed |
+|---|---|---|---|---|
+| Off-peak | 58.1 | 14.1 | 69.9 | +20.3% [+10.8%, +28.5%] |
+| Morning peak | 303.3 | 100.4 | 314.1 | +3.6% [+0.4%, +7.0%] |
+| Evening peak | 308.1 | 100.0 | 321.7 | +4.4% [+1.5%, +7.2%] |
+| Incident | 311.8 | 131.1 | 316.3 | +1.5% [-1.1%, +3.8%] |
+| Surge | 371.1 | 136.8 | 351.9 | -5.2% [-6.8%, -3.5%] |
+| Noisy sensors | 303.3 | 103.6 | 333.2 | +9.9% [+7.2%, +12.6%] |
+
+Per-seed results: the two trained PPO seeds reach morning-peak mean waiting times of
+293.9 s (seed 13,
+-3.1% vs fixed-time) and
+334.4 s (seed 42,
++10.2%); the third planned seed did not
+train (`DECISIONS.md` 12).
+
+![Mean waiting time per scenario](../figures/wait_by_scenario.png)
+
+![Vehicles waiting over time in the morning peak](../figures/wait_over_time.png)
+
+**Reading the results honestly.** The synthetic peaks are heavily oversaturated: under every
+controller a share of 0.29 (fixed-time) to
+0.36 (PPO seed 42) of the vehicles scheduled after
+the warm-up has not completed its trip when the hour ends, and vehicles wait
+279 s (fixed-time) to
+383 s (max-pressure) in SUMO's insertion
+queue before they even enter the 300 m approach. The waiting-time means in Tables 1 and 2 are over
+*completed* trips only, so they must be read together with throughput and the insertion delay:
+max-pressure's low waiting time of completed trips in the peaks goes with the highest insertion delay,
+i.e. it keeps the approach lanes moving by serving the longest queues while the backlog grows behind
+them. Throughput, the least selective metric, is
+2706 veh/h for fixed-time,
+2683 for max-pressure and
+2484 for the pooled PPO policy
+(-8.2%, CI
+-9.5% to
+-7.0%).
+
+With the CPU budget used here (two seeds, 300k steps each) the safe PPO policy does **not** beat the
+baselines: pooled over seeds it changes the morning-peak waiting time by
++3.6% (CI
++0.4% to
++7.0%) relative to fixed-time, with seed 13
+slightly better and seed 42 clearly worse than fixed-time, and max-pressure is far ahead on waiting
+time in every scenario. Where the learned policy does differ from fixed-time is pedestrians: its
+pedestrian mean wait in the morning peak is 10.5 s vs
+17.5 s
+(-39.7%), because the pedestrian term of the reward
+makes it return to the walk phases more often (182
+switches per hour vs 87), at the price
+of more lost time per cycle. The safety claim holds independently of performance: the shield recorded
+0.00 interventions per PPO episode (the mask kept
+every sampled action admissible), and zero for both baselines.
+
+## 7. Robustness and fairness across vehicle classes
+
+Noisy sensors (Table 2, last row) test the policy on the morning peak with Gaussian noise and 5 %
+dropped readings on every detector input. Table 3 reports the per-class waiting times in the morning
+peak; the rickshaw and bus columns matter most because these are the classes a count-based controller
+tends to starve.
+
+**Table 3. Mean waiting time (s) per vehicle class, morning peak (PPO change vs fixed-time).**
+
+| Class | Fixed-time | Max-pressure | Safe PPO | PPO vs fixed |
+|---|---|---|---|---|
+| Car | 303.3 | 96.6 | 315.5 | +4.0% |
+| Motorcycle | 299.6 | 92.3 | 310.6 | +3.7% |
+| CNG | 299.1 | 95.5 | 309.8 | +3.6% |
+| Rickshaw | 301.2 | 91.8 | 310.8 | +3.2% |
+| Bus | 316.1 | 133.5 | 324.6 | +2.7% |
+| Truck | 312.9 | 120.4 | 325.8 | +4.1% |
+
+![Waiting time per vehicle class](../figures/fairness_by_class.png)
+
+Across classes the ranking is the same as for the aggregate: max-pressure lowest, then fixed-time
+and PPO close together. The PPO policy does not starve the slow classes relative to fixed-time (rickshaw
++3.2%, bus
++2.7% vs fixed-time), but it also does not favour them:
+with vehicle counts per class in the observation and no class weights in the reward, there is no
+incentive to do so. In the noisy-sensor scenario the pooled PPO waiting time changes by
++9.9% vs fixed-time against
++3.6% on the clean morning peak, so Gaussian
+noise and 5 % dropped readings cost the policy a few percent; max-pressure, which also consumes the noisy
+readings, keeps its advantage (-65.8%).
+
+## 8. Edge deployment benchmarks
+
+The policy network with the observation normalisation folded in is exported to ONNX opset 17 and
+quantised with onnxruntime's dynamic int8 quantisation (`src/drs/export_onnx.py`). On
+10,000 random observations drawn around the training distribution, the float ONNX
+graph agrees with PyTorch on 100.00% of masked argmax actions and
+the int8 graph on 99.51% (vs float). Sizes: float
+101.9 kB, int8 31.5 kB. Single-thread onnxruntime latency
+over 10,000 calls: float p50 0.009 ms / p95
+0.012 ms, int8 p50 0.012 ms / p95
+0.016 ms. These were measured in the development VM with one thread as an
+approximation of a small edge CPU; they are not Jetson measurements.
+
+The controller service (`src/drs/service/`) is an asyncio application: it subscribes to
+`drs/junction/<id>/detectors`, builds the observation with the same code as training, runs the ONNX
+policy, passes the decision through the same shield, and publishes `drs/junction/<id>/command` and
+`status` (versioned pydantic schemas). A watchdog falls back to fixed-time and publishes an alarm
+when the model fails to load, inference exceeds a 50 ms deadline, or detector data is older than 15 s;
+a FastAPI sidecar serves `/health` and Prometheus `/metrics`. A simulator bridge closes the loop with
+SUMO; the integration test runs it for 300 simulated seconds against a local mosquitto broker
+(last run: 300 commands, 0 missed command deadlines).
+
+## 9. Visualisation design
+
+The website replays the same demand seed under fixed-time and PPO side by side. Positions, headings,
+speeds and classes of every vehicle and pedestrian are sampled every 0.5 s from the simulation,
+quantised to 5 cm, delta-encoded into a compact binary (`DRSR`, about 3 MB gzipped per hour of
+traffic) and decompressed in the browser. Roads, lane markings, stop lines, zebra crossings and
+sidewalks are generated from the SUMO network geometry so they match the simulation exactly; the city
+blocks, signage with fictional Bengali text, wires, trees and street furniture are seeded procedural
+geometry. Vehicles are low-poly primitives rendered with one instanced mesh per class, interpolated
+between samples, with brake lights from deceleration and headlights at night. The HUD reads queues,
+waits, phase and shield interventions from the replay manifest, never from hard-coded values.
+
+## 10. Limitations
+
+Synthetic demand inspired by Dhaka without calibration; no real-world data, detector characteristics
+or validation; a CPU training budget of 300,000 steps per seed; a simplified
+pedestrian model (no jaywalking, no mid-block crossings); the gridlock-prevention settings required by
+the sublane + pedestrian combination; a single junction as the primary result with the grid as a
+secondary experiment; edge latency measured on a development VM.
+
+## 11. Future work
+
+Real detector data and sensor models; sim-to-real transfer with domain randomisation of the mix and
+driver parameters; multi-agent coordination along corridors with the parameter-shared and graph
+policies; class-aware fairness objectives; transfer to other South Asian cities with different mixes.
+
+## References
+
+- [sumo-rl] Alegre, L. N. SUMO-RL (2019). GitHub repository, https://github.com/LucasAlegre/sumo-rl
+- [sumo] Eclipse SUMO, Simulation of Urban MObility. https://github.com/eclipse-sumo/sumo
+- [sb3] Raffin, A., Hill, A., Gleave, A., Kanervisto, A., Ernestus, M., Dormann, N. Stable-Baselines3:
+  Reliable Reinforcement Learning Implementations. Journal of Machine Learning Research 22(268):1-8, 2021.
+- [sb3-contrib] Stable-Baselines3 Contrib, PPO with invalid action masking (MaskablePPO).
+  https://github.com/Stable-Baselines-Team/stable-baselines3-contrib
+- [presslight] Wei, H., Chen, C., Zheng, G., Wu, K., Gayah, V., Xu, K., Li, Z. PressLight: Learning Max
+  Pressure Control to Coordinate Traffic Signals in Arterial Network. KDD '19, pp. 1290-1298, 2019.
+- [colight] Wei, H., Xu, N., Zhang, H., Zheng, G., Zang, X., Chen, C., Zhang, W., Zhu, Y., Xu, K., Li, Z.
+  CoLight: Learning Network-level Cooperation for Traffic Signal Control. CIKM '19, 2019.
+- [baselines] Dhariwal, P. et al. OpenAI Baselines (2017). GitHub repository, https://github.com/openai/baselines
+
+## Appendix A. Additional learning components
+
+**A.1 Queue forecasting (supervised).** Implemented in `src/drs/forecast.py` (per-lane queue
+logging, windowing, naive baselines, a GRU and a causal TCN with bootstrap CIs over held-out
+episodes) with unit tests, but **not executed**: the development VM restarted on the deadline day
+and the remaining budget went to the core evaluation. No forecasting numbers are reported.
+
+**A.2 Imitation-learning warm start.** 5,760 (observation, mask,
+action) tuples from the max-pressure controller on training seeds were used to train the policy MLP
+by masked cross-entropy (held-out accuracy 0.972); the cloned weights
+and the dataset's observation statistics initialise MaskablePPO. With the same seed, budget and
+hyper-parameters, the validation return at the first evaluation is
+-1655 from scratch vs -2108 with
+the warm start, at 100k steps -1613 vs
+-1520, and the best validation return is
+-1266 (full run) vs -1283 (the warm-started
+run was interrupted by a VM restart after 245k of 300k steps, so its curve is compared on the
+overlapping window only).
+
+![Learning curves: PPO from scratch vs behaviour-cloning warm start](../figures/imitation_curves.png)
+
+**A.3 Graph coordination on the 2x2 grid.** The `grid2x2` network, the parameter-shared
+multi-junction environment, the neighbour-observation layout and the graph-attention encoder
+(`src/drs/gnn.py`) are implemented and unit-tested, and three variant configs exist
+(`configs/train_grid_{independent,shared,gnn}.yaml`), but the grid runs were **not executed** for the
+same reason as A.1. No grid numbers are reported.
