@@ -91,7 +91,7 @@ export const SCENARIO_LABELS: Record<string, string> = {
 export const CONTROLLER_LABELS: Record<string, string> = {
   fixed_time: 'Fixed-time (Webster)',
   max_pressure: 'Max-pressure',
-  ppo: 'Safe PPO (3 seeds pooled)',
+  ppo: 'Safe PPO (seeds pooled)',
   ppo_s13: 'Safe PPO seed 13',
   ppo_s42: 'Safe PPO seed 42',
   ppo_s2026: 'Safe PPO seed 2026',
