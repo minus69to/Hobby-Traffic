@@ -70,7 +70,10 @@ class FrameRecorder:
         for vid, res in t.vehicle.getAllSubscriptionResults().items():
             tr = self.tracks.get(vid)
             if tr is None:
-                vtype = t.vehicle.getTypeID(vid)
+                try:
+                    vtype = t.vehicle.getTypeID(vid)
+                except Exception:  # noqa: BLE001 - subscription result of a vehicle that just left the network
+                    continue
                 cls = vtype if vtype in CLASSES else TYPE_TO_CLASS.get(vtype, "car")
                 tr = Track(vid, cls, f)
                 self.tracks[vid] = tr
