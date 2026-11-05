@@ -16,9 +16,9 @@ enforces minimum and maximum greens, inserts yellow and all-red, and rejects con
 Across six demand scenarios (off-peak, morning and evening peaks, a lane-blocking incident, a 20 %
 surge and noisy sensors) with 10 evaluation episodes each on seeds disjoint
 from training, the pooled three-seed policy changes mean vehicle waiting time in the morning peak by
-+3.6% (95 % CI
-+0.4% to
-+7.0%) relative to a Webster fixed-time plan,
++1.8% (95 % CI
+-0.7% to
++5.1%) relative to a Webster fixed-time plan,
 with 0.00 shield interventions per episode. The
 policy exports to a 31.5 kB int8 ONNX model with
 99.51% action agreement and sub-millisecond single-thread latency, and
@@ -112,16 +112,16 @@ min and max, every switch preceded by the full yellow + all-red clearance.
 **Training.** MaskablePPO, MLP 2 x 128 tanh, `n_steps` 1024, batch 256, 10 epochs, learning rate
 3e-4 with linear decay, gamma 0.99, GAE 0.95, clip 0.2, entropy 0.01, four parallel SUMO workers,
 observation and reward normalisation (VecNormalize, saved with the policy). Curriculum: off-peak,
-then peaks, then a mixture including the incident and surge. Seeds 13, 42,
-300,000 environment steps each, 112 min per seed on
-4 CPU cores (45.7 env steps/s); the checkpoint with the best validation
+then peaks, then a mixture including the incident and surge. Seeds 13, 2026, 42,
+300,000 environment steps each, 115 min per seed on
+4 CPU cores (44.2 env steps/s); the checkpoint with the best validation
 return (one morning-peak episode on a held-out seed every 20,480 steps) is kept.
 
 ## 5. Experimental setup
 
 Controllers: fixed-time, max-pressure, PPO (three seeds, reported individually and pooled).
 Scenarios: the six above. 10 episodes per scenario and controller on the
-evaluation seeds, 240 episodes in total. Metrics from SUMO tripinfo output (unfinished
+evaluation seeds, 300 episodes in total. Metrics from SUMO tripinfo output (unfinished
 trips included) and per-second recordings: mean and 95th percentile travel time, mean waiting time,
 mean queue length, throughput, per-class waiting time, pedestrian mean wait (personinfo waiting
 time), shield interventions, phase switches per hour. Means, standard deviations and 95 % bootstrap
@@ -137,32 +137,34 @@ Table 1 gives the morning peak; the full table for every scenario and metric is 
 
 | Metric | Fixed-time | Max-pressure | Safe PPO (pooled) | PPO vs fixed-time |
 |---|---|---|---|---|
-| Mean waiting time (s) | 303.3 [296.9, 309.7] | 100.4 [91.6, 110.1] | 314.1 [308.4, 319.6] | +3.6% [+0.4%, +7.0%] |
-| Mean travel time (s) | 503.8 | 278.7 | 571.1 | +13.4% |
-| 95th pct travel time (s) | 1133.6 | 491.0 | 1064.3 | -6.1% |
-| Mean queue (veh) | 269.4 | 240.8 | 256.0 | -4.9% |
-| Throughput (veh/h) | 2706 | 2683 | 2484 | -8.2% |
-| Pedestrian mean wait (s) | 17.5 | 4.5 | 10.5 | -39.7% |
+| Mean waiting time (s) | 303.3 [296.9, 309.7] | 100.4 [91.6, 110.1] | 308.9 [304.5, 312.9] | +1.8% [-0.7%, +5.1%] |
+| Mean travel time (s) | 503.8 | 278.7 | 565.5 | +12.2% |
+| 95th pct travel time (s) | 1133.6 | 491.0 | 1083.5 | -4.4% |
+| Mean queue (veh) | 269.4 | 240.8 | 254.4 | -5.6% |
+| Throughput (veh/h) | 2706 | 2683 | 2513 | -7.1% |
+| Pedestrian mean wait (s) | 17.5 | 4.5 | 10.3 | -41.0% |
 | Shield interventions | 0.00 | 0.00 | 0.00 | |
-| Phase switches / h | 87 | 206 | 182 | |
+| Phase switches / h | 87 | 206 | 184 | |
 
 **Table 2. Mean waiting time (s) per scenario, PPO change vs fixed-time [95 % CI].**
 
 | Scenario | Fixed-time | Max-pressure | Safe PPO | PPO vs fixed |
 |---|---|---|---|---|
-| Off-peak | 58.1 | 14.1 | 69.9 | +20.3% [+10.8%, +28.5%] |
-| Morning peak | 303.3 | 100.4 | 314.1 | +3.6% [+0.4%, +7.0%] |
-| Evening peak | 308.1 | 100.0 | 321.7 | +4.4% [+1.5%, +7.2%] |
-| Incident | 311.8 | 131.1 | 316.3 | +1.5% [-1.1%, +3.8%] |
-| Surge | 371.1 | 136.8 | 351.9 | -5.2% [-6.8%, -3.5%] |
-| Noisy sensors | 303.3 | 103.6 | 333.2 | +9.9% [+7.2%, +12.6%] |
+| Off-peak | 58.1 | 14.1 | 80.0 | +37.7% [+30.2%, +45.1%] |
+| Morning peak | 303.3 | 100.4 | 308.9 | +1.8% [-0.7%, +5.1%] |
+| Evening peak | 308.1 | 100.0 | 312.3 | +1.4% [-1.3%, +4.0%] |
+| Incident | 311.8 | 131.1 | 308.3 | -1.1% [-3.4%, +1.3%] |
+| Surge | 371.1 | 136.8 | 344.9 | -7.1% [-8.6%, -5.7%] |
+| Noisy sensors | 303.3 | 103.6 | 323.9 | +6.8% [+4.6%, +9.1%] |
 
-Per-seed results: the two trained PPO seeds reach morning-peak mean waiting times of
+Per-seed results: the three PPO seeds reach morning-peak mean waiting times of
 293.9 s (seed 13,
--3.1% vs fixed-time) and
+-3.1% vs fixed-time),
 334.4 s (seed 42,
-+10.2%); the third planned seed did not
-train (`DECISIONS.md` 12).
++10.2%) and
+298.5 s (seed 2026,
+-1.6%); seed 2026 was trained after the
+deadline as follow-up work (`DECISIONS.md` 12).
 
 ![Mean waiting time per scenario](../figures/wait_by_scenario.png)
 
@@ -181,22 +183,21 @@ i.e. it keeps the approach lanes moving by serving the longest queues while the 
 them. Throughput, the least selective metric, is
 2706 veh/h for fixed-time,
 2683 for max-pressure and
-2484 for the pooled PPO policy
-(-8.2%, CI
--9.5% to
--7.0%).
+2513 for the pooled PPO policy
+(-7.1%, CI
+-8.2% to
+-6.0%).
 
-With the CPU budget used here (two seeds, 300k steps each) the safe PPO policy does **not** beat the
-baselines: pooled over seeds it changes the morning-peak waiting time by
-+3.6% (CI
-+0.4% to
-+7.0%) relative to fixed-time, with seed 13
-slightly better and seed 42 clearly worse than fixed-time, and max-pressure is far ahead on waiting
+With the CPU budget used here (three seeds, 300k steps each) the safe PPO policy does **not** beat the
+baselines: pooled over the three seeds it changes the morning-peak waiting time by
++1.8% (CI
+-0.7% to
++5.1%) relative to fixed-time, with a visible spread between seeds, and max-pressure is far ahead on waiting
 time in every scenario. Where the learned policy does differ from fixed-time is pedestrians: its
-pedestrian mean wait in the morning peak is 10.5 s vs
+pedestrian mean wait in the morning peak is 10.3 s vs
 17.5 s
-(-39.7%), because the pedestrian term of the reward
-makes it return to the walk phases more often (182
+(-41.0%), because the pedestrian term of the reward
+makes it return to the walk phases more often (184
 switches per hour vs 87), at the price
 of more lost time per cycle. The safety claim holds independently of performance: the shield recorded
 0.00 interventions per PPO episode (the mask kept
@@ -213,23 +214,23 @@ tends to starve.
 
 | Class | Fixed-time | Max-pressure | Safe PPO | PPO vs fixed |
 |---|---|---|---|---|
-| Car | 303.3 | 96.6 | 315.5 | +4.0% |
-| Motorcycle | 299.6 | 92.3 | 310.6 | +3.7% |
-| CNG | 299.1 | 95.5 | 309.8 | +3.6% |
-| Rickshaw | 301.2 | 91.8 | 310.8 | +3.2% |
-| Bus | 316.1 | 133.5 | 324.6 | +2.7% |
-| Truck | 312.9 | 120.4 | 325.8 | +4.1% |
+| Car | 303.3 | 96.6 | 310.2 | +2.3% |
+| Motorcycle | 299.6 | 92.3 | 305.6 | +2.0% |
+| CNG | 299.1 | 95.5 | 305.0 | +2.0% |
+| Rickshaw | 301.2 | 91.8 | 305.8 | +1.5% |
+| Bus | 316.1 | 133.5 | 318.7 | +0.8% |
+| Truck | 312.9 | 120.4 | 319.8 | +2.2% |
 
 ![Waiting time per vehicle class](../figures/fairness_by_class.png)
 
 Across classes the ranking is the same as for the aggregate: max-pressure lowest, then fixed-time
 and PPO close together. The PPO policy does not starve the slow classes relative to fixed-time (rickshaw
-+3.2%, bus
-+2.7% vs fixed-time), but it also does not favour them:
++1.5%, bus
++0.8% vs fixed-time), but it also does not favour them:
 with vehicle counts per class in the observation and no class weights in the reward, there is no
 incentive to do so. In the noisy-sensor scenario the pooled PPO waiting time changes by
-+9.9% vs fixed-time against
-+3.6% on the clean morning peak, so Gaussian
++6.8% vs fixed-time against
++1.8% on the clean morning peak, so Gaussian
 noise and 5 % dropped readings cost the policy a few percent; max-pressure, which also consumes the noisy
 readings, keeps its advantage (-65.8%).
 
@@ -242,8 +243,8 @@ graph agrees with PyTorch on 100.00% of masked argmax actions and
 the int8 graph on 99.51% (vs float). Sizes: float
 101.9 kB, int8 31.5 kB. Single-thread onnxruntime latency
 over 10,000 calls: float p50 0.009 ms / p95
-0.012 ms, int8 p50 0.012 ms / p95
-0.016 ms. These were measured in the development VM with one thread as an
+0.015 ms, int8 p50 0.012 ms / p95
+0.021 ms. These were measured in the development VM with one thread as an
 approximation of a small edge CPU; they are not Jetson measurements.
 
 The controller service (`src/drs/service/`) is an asyncio application: it subscribes to
@@ -297,10 +298,26 @@ policies; class-aware fairness objectives; transfer to other South Asian cities 
 
 ## Appendix A. Additional learning components
 
-**A.1 Queue forecasting (supervised).** Implemented in `src/drs/forecast.py` (per-lane queue
-logging, windowing, naive baselines, a GRU and a causal TCN with bootstrap CIs over held-out
-episodes) with unit tests, but **not executed**: the development VM restarted on the deadline day
-and the remaining budget went to the core evaluation. No forecasting numbers are reported.
+**A.1 Queue forecasting (supervised).** Per-lane queues (halting vehicles) were logged every second
+from eight training-seed episodes (fixed-time, max-pressure and PPO control, four scenarios) and
+evaluated on four held-out-seed episodes: 5,568 training and
+2,784 test windows. Inputs: the last 60 s of
+all 12 lane queues plus the phase one-hot; targets: each lane's queue 30 s and 60 s ahead. MAE in
+vehicles (95 % bootstrap CIs over held-out episodes): last value
+6.14 / 7.80
+(2.73 to 14.15 at 60 s),
+moving average 6.81 / 7.63,
+GRU 3.60 / 3.90
+(2.50 to 5.30 at 60 s),
+TCN 3.66 / 4.03
+(2.27 to 5.79 at 60 s).
+RMSE at 60 s: last value 12.20, GRU 5.44,
+TCN 5.73. Both networks roughly halve the error of the naive baselines at
+both horizons; the GRU and the TCN are within each other's confidence intervals. The
+forecast-augmented PPO variant (forecasts appended to the observation) was not trained within the
+budget.
+
+![Queue forecasting error by model and horizon](../figures/forecast_mae.png)
 
 **A.2 Imitation-learning warm start.** 5,760 (observation, mask,
 action) tuples from the max-pressure controller on training seeds were used to train the policy MLP

@@ -9,6 +9,14 @@
    "best_validation_return": -1265.9379948710557
   },
   {
+   "seed": 2026,
+   "network": "single",
+   "total_timesteps": 300000,
+   "wall_clock_s": 7263.6,
+   "env_steps_per_s": 41.3,
+   "best_validation_return": -1317.2660059982445
+  },
+  {
    "seed": 42,
    "network": "single",
    "total_timesteps": 300000,
