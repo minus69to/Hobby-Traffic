@@ -157,6 +157,35 @@ def training_curves(models_dir: Path, out: Path) -> list[dict[str, Any]]:
     return runs
 
 
+def forecast_bars(fc: dict[str, Any], out: Path) -> None:
+    models = [m for m in ("last_value", "moving_average", "gru", "tcn") if m in fc.get("models", {})]
+    if not models:
+        return
+    fig, ax = plt.subplots(figsize=(6, 3.2))
+    w = 0.38
+    for i, h in enumerate(("h30", "h60")):
+        ys = [fc["models"][m][h]["mae"] for m in models]
+        lo = [fc["models"][m][h]["mae"] - fc["models"][m][h]["mae_ci"][0] for m in models]
+        hi = [fc["models"][m][h]["mae_ci"][1] - fc["models"][m][h]["mae"] for m in models]
+        ax.bar(
+            [k + (i - 0.5) * w for k in range(len(models))],
+            ys,
+            width=w,
+            yerr=[lo, hi],
+            capsize=2,
+            label=f"{h[1:]} s ahead",
+            color=["#60a5fa", "#34d399"][i],
+        )
+    ax.set_xticks(range(len(models)))
+    ax.set_xticklabels([m.replace("_", " ") for m in models])
+    ax.set_ylabel("MAE (vehicles per lane)")
+    ax.set_title("Queue forecasting on held-out seeds (95 % CI)")
+    ax.legend(frameon=False)
+    fig.tight_layout()
+    fig.savefig(out)
+    plt.close(fig)
+
+
 def edge_latency(bench: dict[str, Any], out: Path) -> None:
     if not bench.get("int8", {}).get("n_calls"):
         return
@@ -229,6 +258,9 @@ def main() -> None:
         ),
         encoding="utf-8",
     )
+    fc_path = res / "forecast.json"
+    if fc_path.exists():
+        forecast_bars(json.loads(fc_path.read_text(encoding="utf-8")), fig_dir / "forecast_mae.png")
     bench_path = res / "edge_benchmark.json"
     if bench_path.exists():
         edge_latency(json.loads(bench_path.read_text(encoding="utf-8")), fig_dir / "edge_latency.png")

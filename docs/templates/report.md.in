@@ -297,10 +297,26 @@ policies; class-aware fairness objectives; transfer to other South Asian cities 
 
 ## Appendix A. Additional learning components
 
-**A.1 Queue forecasting (supervised).** Implemented in `src/drs/forecast.py` (per-lane queue
-logging, windowing, naive baselines, a GRU and a causal TCN with bootstrap CIs over held-out
-episodes) with unit tests, but **not executed**: the development VM restarted on the deadline day
-and the remaining budget went to the core evaluation. No forecasting numbers are reported.
+**A.1 Queue forecasting (supervised).** Per-lane queues (halting vehicles) were logged every second
+from eight training-seed episodes (fixed-time, max-pressure and PPO control, four scenarios) and
+evaluated on four held-out-seed episodes: [[forecast.meta.n_train_windows:int]] training and
+[[forecast.meta.n_test_windows:int]] test windows. Inputs: the last [[forecast.meta.history_s]] s of
+all 12 lane queues plus the phase one-hot; targets: each lane's queue 30 s and 60 s ahead. MAE in
+vehicles (95 % bootstrap CIs over held-out episodes): last value
+[[forecast.last_value.h30.mae:.2f]] / [[forecast.last_value.h60.mae:.2f]]
+([[forecast.last_value.h60.mae_ci_low:.2f]] to [[forecast.last_value.h60.mae_ci_high:.2f]] at 60 s),
+moving average [[forecast.moving_average.h30.mae:.2f]] / [[forecast.moving_average.h60.mae:.2f]],
+GRU [[forecast.gru.h30.mae:.2f]] / [[forecast.gru.h60.mae:.2f]]
+([[forecast.gru.h60.mae_ci_low:.2f]] to [[forecast.gru.h60.mae_ci_high:.2f]] at 60 s),
+TCN [[forecast.tcn.h30.mae:.2f]] / [[forecast.tcn.h60.mae:.2f]]
+([[forecast.tcn.h60.mae_ci_low:.2f]] to [[forecast.tcn.h60.mae_ci_high:.2f]] at 60 s).
+RMSE at 60 s: last value [[forecast.last_value.h60.rmse:.2f]], GRU [[forecast.gru.h60.rmse:.2f]],
+TCN [[forecast.tcn.h60.rmse:.2f]]. Both networks roughly halve the error of the naive baselines at
+both horizons; the GRU and the TCN are within each other's confidence intervals. The
+forecast-augmented PPO variant (forecasts appended to the observation) was not trained within the
+budget.
+
+![Queue forecasting error by model and horizon](../figures/forecast_mae.png)
 
 **A.2 Imitation-learning warm start.** [[imitation.bc_ppo.bc_samples:int]] (observation, mask,
 action) tuples from the max-pressure controller on training seeds were used to train the policy MLP
