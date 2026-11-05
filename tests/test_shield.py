@@ -143,8 +143,11 @@ def _check_trace(table: PhaseTable, cfg: SignalConfig, actions: list[int]) -> No
             else:
                 assert green_run <= cfg.max_green
         if kind == "y":
-            assert n == cfg.yellow
-            assert k + 1 < len(runs) and runs[k + 1][0] == "r" and runs[k + 1][1] == cfg.all_red
+            last_run = k + 1 == len(runs) - 1
+            assert n == cfg.yellow or (k == len(runs) - 1 and n <= cfg.yellow)  # trace may end mid-clearance
+            if k + 1 < len(runs):
+                assert runs[k + 1][0] == "r"
+                assert runs[k + 1][1] == cfg.all_red or (last_run and runs[k + 1][1] <= cfg.all_red)
     assert sh.stats.switches == sum(1 for kind, _ in runs if kind == "y")
 
 
