@@ -4,9 +4,9 @@
   "agreement_vs_torch": 1.0,
   "agreement_vs_float": 1.0,
   "max_abs_logit_diff_vs_torch": 1.430511474609375e-06,
-  "latency_p50_ms": 0.009236,
-  "latency_p95_ms": 0.01168805,
-  "latency_mean_ms": 0.0097823408,
+  "latency_p50_ms": 0.009364,
+  "latency_p95_ms": 0.015398599999999991,
+  "latency_mean_ms": 0.011458453,
   "n_calls": 10000
  },
  "int8": {
@@ -14,9 +14,9 @@
   "agreement_vs_torch": 0.9951,
   "agreement_vs_float": 0.9951,
   "max_abs_logit_diff_vs_torch": 0.09684628248214722,
-  "latency_p50_ms": 0.012188,
-  "latency_p95_ms": 0.016147199999999997,
-  "latency_mean_ms": 0.012985441400000002,
+  "latency_p50_ms": 0.012324,
+  "latency_p95_ms": 0.020554199999999998,
+  "latency_mean_ms": 0.014298778000000002,
   "n_calls": 10000
  },
  "model": "models/final/single_seed13",

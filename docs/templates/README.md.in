@@ -52,7 +52,7 @@ hour even under fixed-time, and insertion delays are several minutes), so waitin
 completed trips must be read together with throughput and `mean_depart_delay` in
 `results/main_table.csv`. With this CPU budget the safe PPO policy does **not** beat the baselines on
 vehicle delay: max-pressure is clearly best on waiting time in every scenario, and PPO lands close to
-fixed-time (seed 13 slightly better, seed 42 worse). PPO does cut pedestrian waiting
+fixed-time (the per-seed rows in `results/main_table.csv` show the spread between seeds). PPO does cut pedestrian waiting
 ([[eval.ppo.morning_peak.ped_mean_wait.pct_vs_fixed:pct]] in the morning peak) and the shield never had
 to intervene. The contribution of this repository is the safety construction, the mixed-traffic
 simulation and the reproducible pipeline, not a performance claim; see `docs/report.md` section 6.
@@ -77,8 +77,7 @@ and float vs PyTorch [[edge.float.agreement_vs_torch:pct100]] on [[edge.n_random
 single-thread CPU latency int8 p50 [[edge.int8.latency_p50_ms:.3f]] ms, p95 [[edge.int8.latency_p95_ms:.3f]] ms
 over [[edge.int8.n_calls:int]] calls (an approximation of a small edge CPU, not a Jetson measurement).
 
-**Training** (`make train`): [[train.n_seeds]] seeds ([[train.seeds]]; the third seed of the plan did not
-train, see `DECISIONS.md` 12) x [[train.steps_per_seed:int]] environment steps on 4 CPU cores, [[train.wall_min_per_seed:.0f]] min per seed on average ([[train.mean_steps_per_s:.1f]] env steps/s).
+**Training** (`make train`): [[train.n_seeds]] seeds ([[train.seeds]]) x [[train.steps_per_seed:int]] environment steps on 4 CPU cores, [[train.wall_min_per_seed:.0f]] min per seed on average ([[train.mean_steps_per_s:.1f]] env steps/s).
 Simulation speed: [[speed.sim_steps_per_second:.0f]] SUMO steps/s per process with the sublane model and pedestrians.
 
 ## Architecture
