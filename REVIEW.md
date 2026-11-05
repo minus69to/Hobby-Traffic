@@ -1,6 +1,6 @@
 # REVIEW (final self-review, M9)
 
-_Draft started before the final evaluation; the "status" lines are updated at the end of the run._
+_Written at the end of the run (2026-11-05, after the VM restart described in PROGRESS.md)._
 
 ## What is strong
 
@@ -22,6 +22,17 @@ _Draft started before the final evaluation; the "status" lines are updated at th
   replays are compact binaries decoded in the browser, the HUD reads the replay manifest.
 
 ## What a hiring manager or reviewer would question
+
+- **The headline result is negative.** With two seeds and 300k steps on CPU the safe PPO policy does
+  not beat fixed-time on vehicle delay and is far behind max-pressure; the only consistent gain is
+  pedestrian waiting time. The repository reports this as is. A reviewer will rightly ask whether the
+  reward, the budget or the observation is the limiting factor; the imitation warm start (appendix A.2)
+  is the only ablation that ran.
+- **Only two seeds; the planned third seed did not train** (crash after a code edit, then a VM
+  restart); the grid and forecasting components are implemented but were never executed.
+- **Oversaturated demand.** Roughly a third of the peak-hour vehicles never complete their trip under
+  any controller, so waiting-time means of completed trips are selective; throughput and insertion
+  delay are reported next to them, but the scenario design could be criticised as too heavy.
 
 - **Synthetic everything.** No real counts, no calibration, no field data. The project says so in
   every artefact, but the numbers are only as meaningful as the assumed demand.
