@@ -86,4 +86,4 @@ items. Two confirmed items could not be applied to runs already in progress, see
 - [x] `scripts/check_numbers.py` passes (README, report and web bundle vs results/)
 - [x] property-based tests rerun with `HYPOTHESIS_PROFILE=thorough` (2,000 examples): zero violations
 - [x] repository searched for anything resembling proprietary deployment material: nothing found
-- [ ] `ALL DELIVERABLES PUSHED` written to PROGRESS.md (last step)
+- [x] `ALL DELIVERABLES PUSHED` written to PROGRESS.md
