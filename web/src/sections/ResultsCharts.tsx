@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Bar, BarChart, CartesianGrid, ErrorBar, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { CONTROLLER_LABELS, EVAL, METRIC_LABELS, SCENARIO_LABELS, stat } from '../data/results';
+import { CONTROLLER_LABELS, EVAL, METRIC_LABELS, SCENARIO_LABELS, fmt, stat } from '../data/results';
 
 const COLOURS: Record<string, string> = { fixed_time: '#f59e0b', max_pressure: '#60a5fa', ppo: '#34d399' };
 const MAIN_CONTROLLERS = ['fixed_time', 'max_pressure', 'ppo'];
@@ -14,7 +14,7 @@ export function ResultsCharts() {
     const row: Record<string, number | string> = { scenario: SCENARIO_LABELS[s] ?? s };
     for (const c of controllers) {
       const st = stat(c, s, metric);
-      if (st) {
+      if (st && typeof st.mean === 'number') {
         row[c] = st.mean;
         row[`${c}_err`] = Math.max(st.mean - st.ci_low, st.ci_high - st.mean);
       }
@@ -26,7 +26,7 @@ export function ResultsCharts() {
     const row: Record<string, number | string> = { cls };
     for (const c of controllers) {
       const st = stat(c, scen, `wait_${cls}`);
-      if (st) {
+      if (st && typeof st.mean === 'number') {
         row[c] = st.mean;
         row[`${c}_err`] = Math.max(st.mean - st.ci_low, st.ci_high - st.mean);
       }
@@ -108,11 +108,12 @@ export function ResultsCharts() {
                   <td>{SCENARIO_LABELS[s] ?? s}</td>
                   {['mean_waiting_time', 'p95_travel_time', 'mean_queue_length', 'throughput', 'ped_mean_wait', 'shield_interventions', 'phase_switches_per_hour'].map((m) => {
                     const st = e[m];
-                    if (typeof st !== 'object') return <td key={m}>–</td>;
+                    if (typeof st !== 'object' || st === null) return <td key={m}>–</td>;
+                    const pct = typeof st.pct_vs_fixed === 'number' ? st.pct_vs_fixed : null;
                     return (
                       <td key={m}>
-                        {st.mean.toFixed(1)} <small>[{st.ci_low.toFixed(1)}, {st.ci_high.toFixed(1)}]</small>
-                        {st.pct_vs_fixed !== undefined && <small className={st.pct_vs_fixed < 0 ? 'neg' : 'pos'}> {st.pct_vs_fixed > 0 ? '+' : ''}{st.pct_vs_fixed.toFixed(0)}%</small>}
+                        {fmt(st.mean)} <small>[{fmt(st.ci_low)}, {fmt(st.ci_high)}]</small>
+                        {pct !== null && <small className={pct < 0 ? 'neg' : 'pos'}> {pct > 0 ? '+' : ''}{pct.toFixed(0)}%</small>}
                       </td>
                     );
                   })}
