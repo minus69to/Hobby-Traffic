@@ -1,0 +1,12 @@
+sim_config: configs/sim.yaml
+network: single
+out_dir: results/small
+controllers:
+  fixed_time: {type: fixed_time}
+  max_pressure: {type: max_pressure}
+  ppo_small: {type: ppo, model: models/small/seed13/best}
+scenarios: [offpeak]
+episodes_per_scenario: 2
+episode_seconds: 600
+n_workers: 2
+bootstrap_samples: 200

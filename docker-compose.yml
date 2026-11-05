@@ -1,0 +1,32 @@
+# Full loop: broker, controller service, SUMO bridge and the static web app.
+# NOTE: the Docker daemon was not available in the development VM, so these files were written but
+# not executed there (see README). `docker compose up --build` then open http://localhost:8081/
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports: ["1883:1883"]
+    volumes:
+      - ./docker/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+
+  service:
+    build: .
+    depends_on: [mosquitto]
+    ports: ["8080:8080"]
+    environment:
+      - PYTHONPATH=/app/src
+
+  bridge:
+    build: .
+    depends_on: [service]
+    environment:
+      - PYTHONPATH=/app/src
+      - LIBSUMO_AS_TRACI=1
+    command: >
+      python -m drs.service.bridge --config configs/service.yaml --scenario morning_peak --seconds 3600
+      --override '{"mqtt": {"host": "mosquitto"}}'
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+    ports: ["8081:80"]

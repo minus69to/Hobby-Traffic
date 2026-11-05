@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.hypothesis/
+# Logs and large artefacts
+logs/*
+!logs/.gitkeep
+models/**/checkpoints/
+models/**/tb/
+models/**/*.zip
+!models/final/**
+sim/out/
+results/raw/
+results/replay_raw/
+*.fcd.xml
+*.fcd.xml.gz
+tripinfo*.xml
+# Node
+web/node_modules/
+web/dist/
+web/playwright-report/
+web/test-results/
+# Certs
+certs/
+*.pem
+*.key
+*.crt
+# Misc
+.DS_Store
+*.swp
+sim/demand/**/*.rou.xml
+sim/demand/**/*.rou.json
+models/single/
+models/single_bc/
+models/grid2x2*/
+models/forecast/
+models/small/
+results/peek/

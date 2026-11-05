@@ -1,0 +1,21 @@
+{
+ "runs": [
+  {
+   "seed": 13,
+   "network": "single",
+   "total_timesteps": 300000,
+   "wall_clock_s": 5666.9,
+   "env_steps_per_s": 52.94,
+   "best_validation_return": -1265.9379948710557
+  },
+  {
+   "seed": 42,
+   "network": "single",
+   "total_timesteps": 300000,
+   "wall_clock_s": 7803.8,
+   "env_steps_per_s": 38.44,
+   "best_validation_return": -1328.6439892274793
+  }
+ ],
+ "note": "Wall-clock on 4 CPU cores in the development VM (see ENVIRONMENT.md)."
+}
