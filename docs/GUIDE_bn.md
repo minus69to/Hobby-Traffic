@@ -61,8 +61,6 @@ from drs.config import SimConfig
 from drs.controllers import FixedTimeController
 from drs.env import TrafficSignalEnv
 from drs.runner import run_episode
-from drs.sumo_sim import SumoSim
-SumoSim.__init__.__defaults__  # noqa
 cfg = SimConfig.load()
 env = TrafficSignalEnv(cfg, "single", "morning_peak", [13], episode_seconds=600)
 env.reset(seed=13)
