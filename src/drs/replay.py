@@ -72,7 +72,7 @@ class FrameRecorder:
             if tr is None:
                 try:
                     vtype = t.vehicle.getTypeID(vid)
-                except Exception:  # noqa: BLE001 - subscription result of a vehicle that just left the network
+                except Exception:
                     continue
                 cls = vtype if vtype in CLASSES else TYPE_TO_CLASS.get(vtype, "car")
                 tr = Track(vid, cls, f)
