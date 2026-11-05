@@ -16,9 +16,9 @@
    "controller": "ppo_s13",
    "seed": 20260,
    "file": "single_morning_peak_ppo_s13.drsr.gz",
-   "size_bytes": 3173008,
+   "size_bytes": 3202622,
    "n_frames": 7200,
-   "n_tracks": 4303
+   "n_tracks": 4302
   },
   {
    "network": "single",
@@ -26,7 +26,7 @@
    "controller": "fixed_time",
    "seed": 20260,
    "file": "single_incident_fixed_time.drsr.gz",
-   "size_bytes": 2836748,
+   "size_bytes": 2856126,
    "n_frames": 7200,
    "n_tracks": 4330
   },
@@ -36,7 +36,7 @@
    "controller": "ppo_s13",
    "seed": 20260,
    "file": "single_incident_ppo_s13.drsr.gz",
-   "size_bytes": 3196696,
+   "size_bytes": 3234414,
    "n_frames": 7200,
    "n_tracks": 4298
   }

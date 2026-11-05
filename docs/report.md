@@ -141,7 +141,7 @@ Table 1 gives the morning peak; the full table for every scenario and metric is 
 | Mean travel time (s) | 503.8 | 278.7 | 571.1 | +13.4% |
 | 95th pct travel time (s) | 1133.6 | 491.0 | 1064.3 | -6.1% |
 | Mean queue (veh) | 269.4 | 240.8 | 256.0 | -4.9% |
-| Throughput (veh) | 2706 | 2683 | 2484 | -8.2% |
+| Throughput (veh/h) | 2706 | 2683 | 2484 | -8.2% |
 | Pedestrian mean wait (s) | 17.5 | 4.5 | 10.5 | -39.7% |
 | Shield interventions | 0.00 | 0.00 | 0.00 | |
 | Phase switches / h | 87 | 206 | 182 | |
